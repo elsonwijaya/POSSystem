@@ -1,0 +1,106 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.13'
+    id 'org.beryx.jlink' version '2.26.0'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    junitVersion = '5.10.0'
+}
+
+sourceCompatibility = '17'
+targetCompatibility = '17'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+application {
+    mainClass = 'javafx.MainApp'
+    mainModule = 'org.example.posystem'
+}
+
+javafx {
+    version = '17.0.2'
+    modules = ['javafx.controls', 'javafx.fxml']
+}
+
+dependencies {
+    implementation "org.openjfx:javafx-controls:${javafx.version}"
+    implementation "org.openjfx:javafx-fxml:${javafx.version}"
+    implementation 'org.xerial:sqlite-jdbc:3.36.0.3'
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation 'com.github.anastaciocintra:escpos-coffee:4.1.0'  // Add this for thermal printer support
+}
+
+task copyResources(type: Copy) {
+    from 'src/main/resources'
+    into "${buildDir}/resources/main"
+    include '**/*.fxml'
+    include '**/*.css'
+    include '**/db/**'
+    include '**/app_database.db'
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+jlink {
+    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    launcher {
+        name = 'POSSystem'
+        noConsole = true  // Change to true for production, false for debugging
+        jvmArgs = [
+                '--add-opens', 'java.base/java.nio.file=org.example.posystem',
+                '--add-opens', 'java.base/java.sql=org.example.posystem',
+                '-Dfile.encoding=UTF-8',
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',  // Add this
+                '--add-opens', 'java.base/java.io=ALL-UNNAMED',    // Add this
+                // Add these new opens for escpos-coffee
+                '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.net=ALL-UNNAMED'
+        ]
+    }
+
+    forceMerge('sqlite', 'escpos-coffee')  // Simplified this line
+    addOptions('--verbose')
+
+    jpackage {
+        appVersion = '1.0.0'
+        outputDir = "installers"
+        imageName = "POSSystem"
+        skipInstaller = false
+
+        installerName = 'POSSystem'
+        installerType = 'exe'
+
+        // Ensure all resources are included
+        resourceDir = file("src/main/resources")
+
+        installerOptions = [
+                '--vendor', 'Your Company Name',
+                '--win-menu',
+                '--win-dir-chooser',
+                '--win-shortcut',
+                '--win-per-user-install',
+                '--win-menu-group', 'POSSystem',
+                '--description', 'POS System Application',
+                '--verbose'
+        ]
+    }
+}
+
+tasks.named('processResources').configure {
+    dependsOn copyResources
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="javafx.controller.ReceiptController">
+    <VBox alignment="CENTER" spacing="20" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50" AnchorPane.topAnchor="50" AnchorPane.bottomAnchor="50">
+        <Label fx:id="receiptLabel" style="-fx-font-size: 16px;" />
+        <Button text="Print" onAction="#handlePrint" prefWidth="250.0" prefHeight="50.0" style="-fx-font-size: 16px;" />
+        <Button fx:id="backButton" text="Back" onAction="#handleBack" prefWidth="250.0" prefHeight="50.0" style="-fx-font-size: 16px;" />
+
+    </VBox>
+</AnchorPane>

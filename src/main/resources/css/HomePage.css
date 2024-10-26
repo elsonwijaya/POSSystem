@@ -1,0 +1,17 @@
+.header {
+    -fx-font-size: 24px; /* Adjust the font size here */
+    -fx-font-weight: bold; /* Make the text bold */
+    -fx-text-fill: #333; /* Change text color */
+}
+
+.large-button {
+    -fx-font-size: 18px; /* Button text size */
+    -fx-background-color: #007bff; /* Button background color */
+    -fx-text-fill: white; /* Button text color */
+    -fx-padding: 10px; /* Button padding */
+    -fx-background-radius: 5px; /* Button border radius */
+}
+
+.large-button:hover {
+    -fx-background-color: #0056b3; /* Change background on hover */
+}

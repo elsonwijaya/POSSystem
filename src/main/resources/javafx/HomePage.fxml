@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="javafx.controller.HomePageController">
+    <children>
+        <VBox alignment="CENTER" spacing="20" layoutX="50" layoutY="50" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50">
+            <Label text="Welcome to the POS System" styleClass="header" />
+            <Button fx:id="calculateTotalButton" text="Calculate Total" onAction="#handleNavigateToCalculateTotal"
+                    prefWidth="200" prefHeight="50" styleClass="large-button" />
+            <Button fx:id="addProductButton" text="Add Product" onAction="#handleNavigateToAddProduct"
+                    prefWidth="200" prefHeight="50" styleClass="large-button" />
+        </VBox>
+    </children>
+</AnchorPane>

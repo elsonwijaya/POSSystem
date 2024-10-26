@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="javafx.controller.CalculateTotalController">
+    <VBox alignment="CENTER" spacing="20" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50" AnchorPane.topAnchor="50" AnchorPane.bottomAnchor="50">
+        <Label text="Select Product:" style="-fx-font-size: 16px;" />
+        <ComboBox fx:id="productComboBox" prefWidth="250.0" prefHeight="40.0" />
+        <Label text="Quantity:" style="-fx-font-size: 16px;" />
+        <TextField fx:id="quantityTextField" minWidth="250.0" maxWidth="250.0" prefHeight="40.0" />
+        <Button fx:id="addButton" text="Add" onAction="#handleAddButton" prefWidth="250.0" prefHeight="50.0" style="-fx-font-size: 16px;" />
+        <Label fx:id="totalLabel" text="Total: Rp" style="-fx-font-weight: bold; -fx-font-size: 16px;" />
+        <Label fx:id="changeLabel" style="-fx-font-size: 16px;" visible="false" />
+        <Button fx:id="checkoutButton" text="Checkout" onAction="#handleCheckout" prefWidth="250.0" prefHeight="50.0" style="-fx-font-size: 16px;" />
+        <Button fx:id="backButton" text="Back" onAction="#handleBack" prefWidth="250.0" prefHeight="50.0" style="-fx-font-size: 16px;" />
+    </VBox>
+</AnchorPane>

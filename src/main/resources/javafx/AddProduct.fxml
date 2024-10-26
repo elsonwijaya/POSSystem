@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="javafx.controller.AddProductController">
+    <VBox alignment="CENTER" spacing="10"
+          AnchorPane.leftAnchor="50"
+          AnchorPane.rightAnchor="50"
+          AnchorPane.topAnchor="50"
+          AnchorPane.bottomAnchor="50">
+
+        <TextField fx:id="nameField" promptText="Product Name" prefWidth="300" prefHeight="40" minWidth="300" maxWidth="300" />
+        <TextField fx:id="priceField" promptText="Price" prefWidth="300" prefHeight="40" minWidth="300" maxWidth="300" />
+        <Button text="Add Product" onAction="#handleAddProduct" prefWidth="300" prefHeight="50" />
+        <Label fx:id="statusLabel" />
+        <Button text="Back" fx:id="backButton" onAction="#handleBack" prefWidth="300" prefHeight="50" />
+    </VBox>
+</AnchorPane>
