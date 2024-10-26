@@ -91,93 +91,9 @@ public class ReceiptController {
 
     @FXML
     public void handlePrint() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Print Options");
-        alert.setHeaderText("Select Printer Type");
-        alert.setContentText("Choose your preferred printing method:");
-
-        ButtonType thermalButton = new ButtonType("Thermal Printer");
-        ButtonType pdfButton = new ButtonType("Save as PDF");
-        ButtonType regularButton = new ButtonType("Regular Printer");
-        ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-
-        alert.getButtonTypes().setAll(thermalButton, pdfButton, regularButton, cancelButton);
-
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent()) {
-            if (result.get() == thermalButton) {
-                printThermal();
-            } else if (result.get() == pdfButton) {
-                saveThermalAsPDF();
-            } else if (result.get() == regularButton) {
-                printRegular();
-            }
-        }
+        printReceipt();
     }
 
-    private void printThermal() {
-        try {
-            Receipt receipt = createReceipt();
-            ThermalPrinter printer = new ThermalPrinter();
-            printer.printReceipt(receipt);
-            showSuccess("Receipt printed successfully!");
-        } catch (Exception e) {
-            showError("Error printing to thermal printer: " + e.getMessage());
-        }
-    }
-
-    private void saveThermalAsPDF() {
-        try {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Save Receipt PDF");
-            fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
-            );
-            fileChooser.setInitialFileName("receipt.pdf");
-
-            Stage stage = (Stage) receiptLabel.getScene().getWindow();
-            File file = fileChooser.showSaveDialog(stage);
-
-            if (file != null) {
-                Receipt receipt = createReceipt();
-                ThermalPrinter printer = new ThermalPrinter();
-                printer.printReceipt(receipt, file.getAbsolutePath());
-                showSuccess("Receipt saved as PDF successfully!");
-            }
-        } catch (Exception e) {
-            showError("Error saving PDF: " + e.getMessage());
-        }
-    }
-
-    private Receipt createReceipt() {
-        Receipt receipt = new Receipt(order, cashGiven, change);
-        // Set additional receipt properties
-        receipt.setBusinessName("Your Business Name");
-        receipt.setSlogan("Your Business Slogan");
-        receipt.setInstagram("@yourbusiness");
-        receipt.setPhone("123-456-789");
-        return receipt;
-    }
-
-    private void showSuccess(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Success");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-
-
-    /*
     private void printReceipt() {
         PrinterJob job = PrinterJob.createPrinterJob();
         if (job != null && job.showPrintDialog(receiptLabel.getScene().getWindow())) {
@@ -192,7 +108,7 @@ public class ReceiptController {
             showError("Print job was canceled.");
         }
     }
-    */
+
     private Node createPrintNode() {
         VBox printLayout = new VBox();
         printLayout.setAlignment(Pos.CENTER);
