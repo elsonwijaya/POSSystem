@@ -150,6 +150,22 @@ public class Database {
         }
     }
 
+    public static boolean removeProduct(Product product) throws SQLException {
+        String sql = "DELETE FROM products WHERE name = ? AND price = ?"; // Using name and price to identify the product
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, product.getName());
+            pstmt.setDouble(2, product.getPrice()); // Ensure `price` uniquely identifies products if names may overlap
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;  // Returns true if the product was removed successfully
+        } catch (SQLException e) {
+            System.err.println("Error removing product: " + e.getMessage());
+            throw new SQLException("Failed to remove product: " + e.getMessage(), e);
+        }
+    }
+
+
     public static List<Product> getAllProducts() {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT name, price FROM products";

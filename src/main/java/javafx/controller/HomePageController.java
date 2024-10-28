@@ -16,6 +16,8 @@ public class HomePageController {
     private Button calculateTotalButton;
     @FXML
     private Button addProductButton;
+    @FXML
+    private Button removeProductButton;
 
     @FXML
     public void handleNavigateToCalculateTotal() {
@@ -25,6 +27,11 @@ public class HomePageController {
     @FXML
     public void handleNavigateToAddProduct() {
         loadScene("/javafx/AddProduct.fxml", "Add Product");
+    }
+
+    @FXML
+    public void handleNavigateToRemoveProduct() {
+        loadScene("/javafx/RemoveProduct.fxml", "Remove Product");
     }
 
     private void loadScene(String fxmlPath, String title) {
