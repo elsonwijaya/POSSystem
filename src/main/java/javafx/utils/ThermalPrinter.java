@@ -58,41 +58,60 @@ public class ThermalPrinter implements Printable {
     }
 
     private void generateReceiptContent() {
+        int lineWidth = CHAR_WIDTH;
+        String separator = "-".repeat(lineWidth);
+
         // Header
         lines.add(centerText(receipt.getBusinessName()));
         lines.add(centerText(receipt.getSlogan()));
-        lines.add("");
+        lines.add(separator);
 
         // Invoice title
         lines.add(centerText("INVOICE"));
-        lines.add("----------------------------------------");
+        lines.add(separator);
+
+        // Column headers
+        String descriptionHeader = "Description";
+        String amountHeader = "Amount";
+        int spacing = lineWidth - (descriptionHeader.length() + amountHeader.length());
+        String headerLine = descriptionHeader + " ".repeat(spacing) + amountHeader;
+        lines.add(headerLine);
+        lines.add(separator);
 
         // Items
         for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
             Product product = entry.getKey();
             int quantity = entry.getValue();
-            double totalPrice = product.getPrice() * quantity;
+            long totalPrice = (long) product.getPrice() * quantity;  // Convert to long to handle larger numbers
 
             lines.add(product.getName());
-            lines.add(rightAlign(String.format("%dx%.2f = Rp%.2f",
-                    quantity, product.getPrice(), totalPrice)));
+            lines.add(rightAlign(String.format("%dx%s = Rp %s",
+                    quantity,
+                    formatRupiah((long) product.getPrice()),
+                    formatRupiah(totalPrice))));
         }
 
-        lines.add("----------------------------------------");
+        lines.add(separator);
 
         // Totals
-        lines.add(rightAlign(String.format("Total: Rp%.2f", receipt.getOrder().getTotal())));
-        lines.add(rightAlign(String.format("Cash: Rp%.2f", receipt.getCashGiven())));
-        lines.add(rightAlign(String.format("Change: Rp%.2f", receipt.getChange())));
-        lines.add("");
+        lines.add(rightAlign(String.format("Total: Rp %s", formatRupiah((long) receipt.getOrder().getTotal()))));
+        lines.add(rightAlign(String.format("Cash: Rp %s", formatRupiah((long) receipt.getCashGiven()))));
+        lines.add(rightAlign(String.format("Change: Rp %s", formatRupiah((long) receipt.getChange()))));
+        lines.add(separator);
+        lines.add(separator);
 
-        // Footer
+        // Footer remains the same
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         lines.add("Date: " + receipt.getDateTime().format(formatter));
         lines.add("");
         lines.add(centerText("Thank you for your purchase!"));
         lines.add(centerText("Instagram: " + receipt.getInstagram()));
         lines.add(centerText("Phone: " + receipt.getPhone()));
+    }
+
+    // Helper method to format currency in Rupiah
+    private String formatRupiah(long amount) {
+        return String.format("%,d", amount).replace(",", ",");
     }
 
     private String centerText(String text) {

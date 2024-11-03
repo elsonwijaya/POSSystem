@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="javafx.controller.OrderHistoryController">
+    <VBox spacing="10" AnchorPane.topAnchor="10" AnchorPane.leftAnchor="10"
+          AnchorPane.rightAnchor="10" AnchorPane.bottomAnchor="10">
+
+        <Label text="Order History" style="-fx-font-size: 20px; -fx-font-weight: bold;" />
+
+        <TableView fx:id="orderTable" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="orderIdColumn" text="Order ID" />
+                <TableColumn fx:id="dateColumn" text="Date" />
+                <TableColumn fx:id="totalColumn" text="Total" />
+            </columns>
+        </TableView>
+
+        <VBox fx:id="orderDetailsPane" spacing="5" visible="false">
+            <Label text="Order Details" style="-fx-font-weight: bold;" />
+            <TableView fx:id="orderItemsTable" prefHeight="200">
+                <columns>
+                    <TableColumn fx:id="productColumn" text="Product" />
+                    <TableColumn fx:id="quantityColumn" text="Quantity" />
+                    <TableColumn fx:id="priceColumn" text="Price" />
+                </columns>
+            </TableView>
+        </VBox>
+
+        <Button text="Back" fx:id="backButton" onAction="#handleBack" />
+    </VBox>
+</AnchorPane>

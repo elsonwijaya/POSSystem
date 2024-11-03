@@ -4,15 +4,20 @@ module org.example.posystem {
     requires javafx.fxml;
     requires java.sql;
     requires java.naming;
-    requires org.xerial.sqlitejdbc;  // Add this for SQLite
-    requires java.desktop; // Required for printing capabilities
+    requires org.xerial.sqlitejdbc;
+    requires java.desktop;
     requires escpos.coffee;
 
-    opens javafx to javafx.fxml;
-    opens javafx.controller to javafx.fxml;
+    // Open more packages to allow reflection access
+    opens javafx to javafx.fxml, javafx.graphics;
+    opens javafx.controller to javafx.fxml, javafx.graphics;
+    opens javafx.model to javafx.base;
+    opens database to java.base;
+
+    // Explicit exports
     exports javafx;
     exports javafx.controller;
     exports javafx.model;
     exports javafx.utils;
-    exports database;  // Add this to allow access to Database class
+    exports database;
 }
