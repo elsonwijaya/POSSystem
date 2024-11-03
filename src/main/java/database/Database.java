@@ -1,11 +1,16 @@
 package database;
 
 import javafx.model.Product;
+import javafx.model.Order;
 import java.io.*;
 import java.nio.file.*;
 import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 // Handles all database operations and initialisation
 public class Database {
@@ -165,7 +170,6 @@ public class Database {
         }
     }
 
-
     public static List<Product> getAllProducts() {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT name, price FROM products";
@@ -185,9 +189,149 @@ public class Database {
         return products;
     }
 
-    public static void setTestDbUrl(String testDbUrl) {
-        databaseUrl = testDbUrl;
+    public static long saveOrder(Order order) throws SQLException {
+        String sql = "INSERT INTO orders (total) VALUES (?)";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            pstmt.setDouble(1, order.getTotal());
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating order failed, no rows affected.");
+            }
+
+            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    long orderId = generatedKeys.getLong(1);
+                    // Save order items
+                    saveOrderItems(orderId, order.getItems());
+                    return orderId;
+                } else {
+                    throw new SQLException("Creating order failed, no ID obtained.");
+                }
+            }
+        }
+    }
+
+    private static void saveOrderItems(long orderId, Map<Product, Integer> items) throws SQLException {
+        String sql = """
+        INSERT INTO order_items (order_id, product_id, quantity, price_per_unit)
+        SELECT ?, id, ?, price
+        FROM products
+        WHERE name = ?
+    """;
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            for (Map.Entry<Product, Integer> entry : items.entrySet()) {
+                Product product = entry.getKey();
+                int quantity = entry.getValue();
+
+                pstmt.setLong(1, orderId);
+                pstmt.setInt(2, quantity);
+                pstmt.setString(3, product.getName());
+
+                pstmt.executeUpdate();
+            }
+        }
+    }
+
+    // Method to retrieve order history
+    public static List<Map<String, Object>> getOrderHistory() throws SQLException {
+        List<Map<String, Object>> orderHistory = new ArrayList<>();
+
+        String sql = """
+        SELECT o.id, o.total, o.order_date,
+               oi.quantity, oi.price_per_unit,
+               p.name as product_name
+        FROM orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN products p ON oi.product_id = p.id
+        ORDER BY o.order_date DESC
+    """;
+
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            long currentOrderId = -1;
+            Map<String, Object> currentOrder = null;
+            List<Map<String, Object>> currentItems = null;
+
+            while (rs.next()) {
+                long orderId = rs.getLong("id");
+
+                if (orderId != currentOrderId) {
+                    // Create new order entry
+                    currentOrder = new HashMap<>();
+                    currentItems = new ArrayList<>();
+                    currentOrder.put("orderId", orderId);
+                    currentOrder.put("total", rs.getDouble("total"));
+                    currentOrder.put("date", rs.getTimestamp("order_date"));
+                    currentOrder.put("items", currentItems);
+                    orderHistory.add(currentOrder);
+                    currentOrderId = orderId;
+                }
+
+                // Add item to current order
+                Map<String, Object> item = new HashMap<>();
+                item.put("productName", rs.getString("product_name"));
+                item.put("quantity", rs.getInt("quantity"));
+                item.put("pricePerUnit", rs.getDouble("price_per_unit"));
+                currentItems.add(item);
+            }
+        }
+
+        return orderHistory;
     }
 
 
+
+
+
+    public static String generateReceiptFileName(String type) {
+        LocalDateTime now = LocalDateTime.now();
+        String date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String time = now.format(DateTimeFormatter.ofPattern("HHmm"));
+
+        String baseFileName = String.format("%s_%s_%s", type, date, time);
+        String fileName = baseFileName + ".pdf";
+        int counter = 1;
+
+        // Check if file exists and append counter if it does
+        File file = new File(getAppDirectory() + File.separator + fileName);
+        while (file.exists()) {
+            fileName = baseFileName + "_" + counter + ".pdf";
+            file = new File(getAppDirectory() + File.separator + fileName);
+            counter++;
+        }
+
+        return fileName;
+    }
+
+    public static String getAppDirectory() {
+        String appPath;
+
+        // Check if we're running from the packaged application
+        String launcherPath = System.getProperty("launcher.path");
+        if (launcherPath != null && !launcherPath.isEmpty()) {
+            // Production environment (packaged app)
+            appPath = System.getProperty("user.dir");
+        } else {
+            // Development environment (Gradle)
+            appPath = System.getProperty("user.dir") + File.separator + "build";
+        }
+
+        // Create Receipt History folder
+        File receiptDir = new File(appPath, "Receipt History");
+        if (!receiptDir.exists()) {
+            receiptDir.mkdirs();
+        }
+
+
+        return receiptDir.getAbsolutePath();
+    }
 }
