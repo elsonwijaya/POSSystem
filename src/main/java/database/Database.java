@@ -315,14 +315,17 @@ public class Database {
     public static String getAppDirectory() {
         String appPath;
 
-        // Check if we're running from the packaged application
-        String launcherPath = System.getProperty("launcher.path");
-        if (launcherPath != null && !launcherPath.isEmpty()) {
-            // Production environment (packaged app)
-            appPath = System.getProperty("user.dir");
-        } else {
-            // Development environment (Gradle)
+        // Check if we're in development environment
+        boolean isDevelopment = System.getProperty("java.class.path").contains("gradle");
+
+        if (isDevelopment) {
+            // Development environment - use build directory
             appPath = System.getProperty("user.dir") + File.separator + "build";
+            System.out.println("Running in development mode");
+        } else {
+            // Production environment - use installation directory
+            appPath = System.getProperty("user.dir");
+            System.out.println("Running in production mode");
         }
 
         // Create Receipt History folder
@@ -331,7 +334,7 @@ public class Database {
             receiptDir.mkdirs();
         }
 
-
+        System.out.println("Receipt directory: " + receiptDir.getAbsolutePath());  // For debugging
         return receiptDir.getAbsolutePath();
     }
 }

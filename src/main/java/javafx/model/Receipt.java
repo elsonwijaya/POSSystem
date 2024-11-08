@@ -8,10 +8,11 @@ public class Receipt {
     private LocalDateTime dateTime;
     private double cashGiven;
     private double change;
-    private static final String BUSINESS_NAME = "businessname";
-    private static final String SLOGAN = "slogan";
-    private static final String INSTAGRAM = "@instagram";
-    private static final String PHONE = "012345";
+    // Updated with actual values
+    private static final String BUSINESS_NAME = "secondcourse.";    // Replace with actual business name
+    private static final String SLOGAN = "'CAUSE FIRST IS NEVER ENOUGH'";        // Replace with actual slogan
+    private static final String INSTAGRAM = "@secondcourse.id";            // Replace with actual Instagram
+    private static final String PHONE = "0123456789";                   // Replace with actual phone number
 
     public Receipt(Order order, double cashGiven, double change) {
         this.order = order;
