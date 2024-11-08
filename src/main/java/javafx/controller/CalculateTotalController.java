@@ -122,7 +122,7 @@ public class CalculateTotalController {
         layout.getChildren().add(cashInput);
 
         // Add "Correct Amount" button
-        Button correctAmountBtn = new Button("Correct Amount");
+        Button correctAmountBtn = new Button("Exact Amount");
         correctAmountBtn.setMaxWidth(Double.MAX_VALUE); // Make button full width
         correctAmountBtn.setOnAction(e -> {
             cashInput.setText(String.format("%.0f", currentOrder.getTotal()));

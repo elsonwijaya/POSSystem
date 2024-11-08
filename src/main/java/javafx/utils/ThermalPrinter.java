@@ -1,10 +1,17 @@
 package javafx.utils;
 
-import javafx.model.Receipt;
+import com.github.anastaciocintra.escpos.EscPos;
+import com.github.anastaciocintra.escpos.EscPosConst;
+import com.github.anastaciocintra.escpos.Style;
+import com.github.anastaciocintra.output.PrinterOutputStream;
 import javafx.model.Product;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
+import javafx.model.Receipt;
+
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.standard.Destination;
+import java.awt.*;
 import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
@@ -14,104 +21,68 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.print.attribute.HashPrintRequestAttributeSet;
-import javax.print.attribute.standard.Destination;
-import java.awt.font.FontRenderContext;
-import java.awt.font.LineMetrics;
 
 public class ThermalPrinter implements Printable {
-    private static final int PRINTER_WIDTH_MM = 80;  // Standard thermal paper width
-    private static final int CHAR_WIDTH = 32;        // Characters per line
-    private static final float POINTS_PER_MM = 72f / 25.4f;  // Convert mm to points
+    private static final int PRINTER_WIDTH_MM = 58;
+    private static final int CHAR_WIDTH = 32;
+    private static final float POINTS_PER_MM = 72f / 25.4f;
     private List<String> lines;
     private Receipt receipt;
 
-    public void printReceipt(Receipt receipt, String outputPath) throws Exception {
+    public ThermalPrinter(Receipt receipt) {
         this.receipt = receipt;
         this.lines = new ArrayList<>();
-
-        // Generate content
-        generateReceiptContent();
-
-        // Setup printer job
-        PrinterJob job = PrinterJob.getPrinterJob();
-        PageFormat pageFormat = job.defaultPage();
-        Paper paper = new Paper();
-
-        // Set paper size (80mm width, height based on content)
-        double width = PRINTER_WIDTH_MM * POINTS_PER_MM;
-        double height = (lines.size() + 10) * 12;  // Approximate height based on line count
-        paper.setSize(width, height);
-        paper.setImageableArea(0, 0, width, height);
-
-        pageFormat.setPaper(paper);
-        pageFormat.setOrientation(PageFormat.PORTRAIT);
-
-        job.setPrintable(this, pageFormat);
-
-        // Set up PDF output
-        HashPrintRequestAttributeSet attributes = new HashPrintRequestAttributeSet();
-        attributes.add(new Destination(new File(outputPath).toURI()));
-
-        // Generate PDF
-        job.print(attributes);
     }
 
     private void generateReceiptContent() {
-        int lineWidth = CHAR_WIDTH;
-        String separator = "-".repeat(lineWidth);
+        String separator = "-".repeat(32);
 
         // Header
         lines.add(centerText(receipt.getBusinessName()));
         lines.add(centerText(receipt.getSlogan()));
         lines.add(separator);
-
-        // Invoice title
         lines.add(centerText("INVOICE"));
         lines.add(separator);
 
-        // Column headers
-        String descriptionHeader = "Description";
-        String amountHeader = "Amount";
-        int spacing = lineWidth - (descriptionHeader.length() + amountHeader.length());
-        String headerLine = descriptionHeader + " ".repeat(spacing) + amountHeader;
-        lines.add(headerLine);
+        // Column Headers
+        lines.add(String.format("%-22s%10s", "Description", "Amount"));
         lines.add(separator);
 
-        // Items
+        // Items - Description and Amount in columns
         for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
             Product product = entry.getKey();
             int quantity = entry.getValue();
-            long totalPrice = (long) product.getPrice() * quantity;  // Convert to long to handle larger numbers
+            long price = (long) product.getPrice();
+            long totalPrice = price * quantity;
 
-            lines.add(product.getName());
-            lines.add(rightAlign(String.format("%dx%s = Rp %s",
-                    quantity,
-                    formatRupiah((long) product.getPrice()),
-                    formatRupiah(totalPrice))));
+            // Product description with pax
+            lines.add(String.format("%s (%d pax)", product.getName(), quantity));
+
+            // Price calculation right-aligned
+            String priceFormat = String.format("%dx%,d = Rp %,d", quantity, price, totalPrice);
+            lines.add(rightAlign(priceFormat));  // Using rightAlign for price line
         }
 
         lines.add(separator);
 
-        // Totals
-        lines.add(rightAlign(String.format("Total: Rp %s", formatRupiah((long) receipt.getOrder().getTotal()))));
-        lines.add(rightAlign(String.format("Cash: Rp %s", formatRupiah((long) receipt.getCashGiven()))));
-        lines.add(rightAlign(String.format("Change: Rp %s", formatRupiah((long) receipt.getChange()))));
+        // Financial details - right aligned
+        lines.add(rightAlign(String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())));
+        lines.add(rightAlign(String.format("Cash: Rp %,d", (long)receipt.getCashGiven())));
+        lines.add(rightAlign(String.format("Change: Rp %,d", (long)receipt.getChange())));
         lines.add(separator);
         lines.add(separator);
 
-        // Footer remains the same
+        // Date - left aligned
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         lines.add("Date: " + receipt.getDateTime().format(formatter));
         lines.add("");
+
+        // Footer - centered
         lines.add(centerText("Thank you for your purchase!"));
         lines.add(centerText("Instagram: " + receipt.getInstagram()));
-        lines.add(centerText("Phone: " + receipt.getPhone()));
-    }
-
-    // Helper method to format currency in Rupiah
-    private String formatRupiah(long amount) {
-        return String.format("%,d", amount).replace(",", ",");
+        lines.add("");
+        lines.add(centerText("best served cold"));
+        lines.add(centerText("please kept refrigerated"));
     }
 
     private String centerText(String text) {
@@ -122,32 +93,125 @@ public class ThermalPrinter implements Printable {
 
     private String rightAlign(String text) {
         if (text.length() >= CHAR_WIDTH) return text;
-        int spaces = CHAR_WIDTH - text.length();
-        return " ".repeat(spaces) + text;
+        return " ".repeat(CHAR_WIDTH - text.length()) + text;
     }
 
+    // PDF Printing
     @Override
     public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) {
-        if (pageIndex > 0) {
-            return NO_SUCH_PAGE;
-        }
+        if (pageIndex > 0) return NO_SUCH_PAGE;
 
         Graphics2D g2d = (Graphics2D) graphics;
         g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 
-        Font font = new Font(Font.MONOSPACED, Font.PLAIN, 10);
+        Font font = new Font(Font.MONOSPACED, Font.PLAIN, 8);
         g2d.setFont(font);
 
-        FontRenderContext frc = g2d.getFontRenderContext();
-        LineMetrics lm = font.getLineMetrics("", frc);
-        float lineHeight = lm.getHeight();
+        float y = g2d.getFontMetrics().getHeight();
 
-        float y = lineHeight;
+        // Print each line exactly as formatted in generateReceiptContent
         for (String line : lines) {
-            g2d.drawString(line, 0, y);
-            y += lineHeight;
+            g2d.drawString(line, 0, y);  // All lines start from left margin
+            y += g2d.getFontMetrics().getHeight();
         }
 
         return PAGE_EXISTS;
+    }
+
+    // Thermal Printing
+    public void printToThermalPrinter() throws Exception {
+        try {
+            PrintService printService = PrintServiceLookup.lookupDefaultPrintService();
+            if (printService == null) {
+                throw new Exception("No printer found");
+            }
+
+            PrinterOutputStream printerOS = new PrinterOutputStream(printService);
+            EscPos escpos = new EscPos(printerOS);
+
+            // Set styles
+            Style titleStyle = new Style()
+                    .setBold(true);
+            Style normalStyle = new Style();
+
+            // Create styles with correct justification constants
+            Style centerStyle = new Style().setJustification(Style.Justification.Center);
+            Style leftStyle = new Style().setJustification(Style.Justification.Left_Default);
+            Style rightStyle = new Style().setJustification(Style.Justification.Right);
+
+            // Generate content
+            generateReceiptContent();
+
+            // Header
+            escpos.write(titleStyle.setJustification(Style.Justification.Center), receipt.getBusinessName()).feed(1)
+                    .write(centerStyle, receipt.getSlogan()).feed(1)
+                    .write(centerStyle, "-".repeat(32)).feed(1)
+                    .write(centerStyle, "INVOICE").feed(1)
+                    .write(centerStyle, "-".repeat(32)).feed(1);
+
+            // Headers
+            escpos.write(leftStyle, String.format("%-22s%10s", "Description", "Amount")).feed(1)
+                    .write(leftStyle, "-".repeat(32)).feed(1);
+
+            // Items
+            for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
+                Product product = entry.getKey();
+                int quantity = entry.getValue();
+                long price = (long) product.getPrice();
+                long totalPrice = price * quantity;
+
+                escpos.write(leftStyle, String.format("%s (%d pax)", product.getName(), quantity)).feed(1)
+                        .write(rightStyle, String.format("%dx%,d = Rp %,d", quantity, price, totalPrice)).feed(1);
+            }
+
+            escpos.write(leftStyle, "-".repeat(32)).feed(1);
+
+            // Totals - Right aligned
+            escpos.write(rightStyle, String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())).feed(1)
+                    .write(rightStyle, String.format("Cash: Rp %,d", (long)receipt.getCashGiven())).feed(1)
+                    .write(rightStyle, String.format("Change: Rp %,d", (long)receipt.getChange())).feed(1);
+
+            escpos.write(leftStyle, "-".repeat(32)).feed(1);
+
+            // Date - Left aligned
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            escpos.write(leftStyle, "Date: " + receipt.getDateTime().format(formatter)).feed(2);
+
+            // Footer - Centered
+            escpos.write(centerStyle, "Thank you for your purchase!").feed(1)
+                    .write(centerStyle, "Instagram: " + receipt.getInstagram()).feed(2)
+                    .write(centerStyle, "best served cold").feed(1)
+                    .write(centerStyle, "please kept refrigerated").feed(3)
+                    .cut(EscPos.CutMode.FULL);
+
+            escpos.close();
+            printerOS.close();
+
+        } catch (Exception e) {
+            throw new Exception("Failed to print to thermal printer: " + e.getMessage());
+        }
+    }
+
+    // PDF Generation
+    public void printReceipt(Receipt receipt, String outputPath) throws Exception {
+        generateReceiptContent();
+
+        PrinterJob job = PrinterJob.getPrinterJob();
+        PageFormat pageFormat = job.defaultPage();
+        Paper paper = new Paper();
+
+        double width = PRINTER_WIDTH_MM * POINTS_PER_MM;
+        double height = (lines.size() + 5) * 12;
+        paper.setSize(width, height);
+        paper.setImageableArea(0, 0, width, height);
+
+        pageFormat.setPaper(paper);
+        pageFormat.setOrientation(PageFormat.PORTRAIT);
+        job.setPrintable(this, pageFormat);
+
+        HashPrintRequestAttributeSet attributes = new HashPrintRequestAttributeSet();
+        attributes.add(new Destination(new File(outputPath).toURI()));
+
+        job.print(attributes);
     }
 }

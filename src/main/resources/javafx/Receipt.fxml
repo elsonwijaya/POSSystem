@@ -8,6 +8,5 @@
         <Label fx:id="receiptLabel" style="-fx-font-size: 16px;" />
         <Button text="Print" onAction="#handlePrint" prefWidth="250.0" prefHeight="50.0" style="-fx-font-size: 16px;" />
         <Button fx:id="backButton" text="Back" onAction="#handleBack" prefWidth="250.0" prefHeight="50.0" style="-fx-font-size: 16px;" />
-
     </VBox>
 </AnchorPane>
