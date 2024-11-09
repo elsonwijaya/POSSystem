@@ -104,44 +104,42 @@ public class ThermalPrinter implements Printable {
             PrinterOutputStream printerOS = new PrinterOutputStream(printService);
             EscPos escpos = new EscPos(printerOS);
 
-            // Set styles
-            Style centerStyle = new Style().setJustification(Style.Justification.Center);
-            Style rightStyle = new Style().setJustification(Style.Justification.Right);
-            Style leftStyle = new Style().setJustification(Style.Justification.Left_Default);
+            // Set styles with explicit center alignment
+            Style centerStyle = new Style()
+                    .setJustification(Style.Justification.Center);
 
-            // Business name with larger font
+            Style rightStyle = new Style()
+                    .setJustification(Style.Justification.Right);
+
+            Style leftStyle = new Style()
+                    .setJustification(Style.Justification.Left_Default);
+
+            // Business name - centered and large
             Style titleStyle = new Style()
                     .setJustification(Style.Justification.Center)
                     .setFontSize(Style.FontSize._2, Style.FontSize._2);
 
-            // Smaller font for slogan
+            // Slogan - centered but smaller
             Style sloganStyle = new Style()
                     .setJustification(Style.Justification.Center)
                     .setFontSize(Style.FontSize._1, Style.FontSize._1);
 
             // Smaller font for products
             Style smallStyle = new Style()
-                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
-
-            Style smallLeftStyle = new Style()
                     .setJustification(Style.Justification.Left_Default)
                     .setFontSize(Style.FontSize._1, Style.FontSize._1);
 
-            Style smallRightStyle = new Style()
-                    .setJustification(Style.Justification.Right)
-                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
-
-            // Header section
-            escpos.write(titleStyle, receipt.getBusinessName()).feed(1)
-                    .write(sloganStyle, receipt.getSlogan()).feed(1)
-                    .write(centerStyle, "Instagram: " + receipt.getInstagram()).feed(1)
-                    .write(centerStyle, "-".repeat(32)).feed(1)
-                    .write(centerStyle, "INVOICE").feed(1)
-                    .write(centerStyle, "-".repeat(32)).feed(1);
+            // Force center alignment for header elements
+            escpos.writeLF(titleStyle, receipt.getBusinessName())
+                    .writeLF(sloganStyle, receipt.getSlogan())
+                    .writeLF(centerStyle, "Instagram: " + receipt.getInstagram())
+                    .writeLF(centerStyle, "-".repeat(32))
+                    .writeLF(centerStyle, "INVOICE")
+                    .writeLF(centerStyle, "-".repeat(32));
 
             // Description and Amount headers
-            escpos.write(leftStyle, String.format("%-22s%10s", "Description", "Amount")).feed(1);
-            escpos.write(centerStyle, "-".repeat(32)).feed(1);
+            escpos.writeLF(leftStyle, String.format("%-22s%10s", "Description", "Amount"))
+                    .writeLF(centerStyle, "-".repeat(32));
 
             // Items with smaller font
             for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
@@ -151,41 +149,48 @@ public class ThermalPrinter implements Printable {
                 long totalPrice = price * quantity;
 
                 // Product name with smaller font
-                escpos.write(smallLeftStyle, String.format("%s - %s",
+                escpos.writeLF(smallStyle, String.format("%s - %s (%d pax)",
                         product.getType().getDisplayName(),
-                        product.getVariant())).feed(1);
+                        product.getVariant(),
+                        quantity));
 
                 // Price calculation with smaller font
-                escpos.write(smallRightStyle, String.format("%dx%,d = Rp %,d",
-                        quantity, price, totalPrice)).feed(1);
+                escpos.writeLF(smallStyle, String.format("%dx%,d = Rp %,d",
+                        quantity, price, totalPrice));
             }
 
-            // Back to normal font size for the rest
-            escpos.write(centerStyle, "-".repeat(32)).feed(1);
+            // Separator
+            escpos.writeLF(centerStyle, "-".repeat(32));
 
             // Totals section
-            escpos.write(rightStyle, String.format("Total: Rp %,d",
-                    (long)receipt.getOrder().getTotal())).feed(1);
+            escpos.writeLF(leftStyle, String.format("Total: Rp %,d",
+                    (long)receipt.getOrder().getTotal()));
 
             if (receipt.isEPayment()) {
-                escpos.write(rightStyle, String.format("E-payment: Rp %,d",
-                        (long)receipt.getCashGiven())).feed(1);
+                escpos.writeLF(leftStyle, String.format("E-payment: Rp %,d",
+                        (long)receipt.getCashGiven()));
             } else {
-                escpos.write(rightStyle, String.format("Cash: Rp %,d",
-                        (long)receipt.getCashGiven())).feed(1);
+                escpos.writeLF(leftStyle, String.format("Cash: Rp %,d",
+                        (long)receipt.getCashGiven()));
             }
-            escpos.write(rightStyle, String.format("Change: Rp %,d",
-                    (long)receipt.getChange())).feed(1);
+            escpos.writeLF(leftStyle, String.format("Change: Rp %,d",
+                    (long)receipt.getChange()));
 
-            escpos.write(centerStyle, "-".repeat(32)).feed(1)
-                    .write(centerStyle, "-".repeat(32)).feed(1);
+            // Double separator
+            escpos.writeLF(centerStyle, "-".repeat(32))
+                    .writeLF(centerStyle, "-".repeat(32));
 
+            // Date
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            escpos.write(leftStyle, "Date: " + LocalDateTime.now().format(formatter)).feed(2);
+            escpos.writeLF(leftStyle, "Date: " + LocalDateTime.now().format(formatter))
+                    .feed(1);
 
-            escpos.write(centerStyle, "Thank you for your purchase!").feed(2)
-                    .write(centerStyle, "Best served cold").feed(1)
-                    .write(centerStyle, "Please kept refrigerated").feed(3)
+            // Footer
+            escpos.writeLF(centerStyle, "Thank you for your purchase!")
+                    .feed(1)
+                    .writeLF(centerStyle, "best served cold")
+                    .writeLF(centerStyle, "please kept refrigerated")
+                    .feed(3)
                     .cut(EscPos.CutMode.FULL);
 
             escpos.close();
