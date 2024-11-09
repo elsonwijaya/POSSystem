@@ -8,17 +8,18 @@ public class Receipt {
     private LocalDateTime dateTime;
     private double cashGiven;
     private double change;
-    // Updated with actual values
-    private static final String BUSINESS_NAME = "secondcourse.";    // Replace with actual business name
-    private static final String SLOGAN = "'CAUSE FIRST IS NEVER ENOUGH'";        // Replace with actual slogan
-    private static final String INSTAGRAM = "@secondcourse.id";            // Replace with actual Instagram
-    private static final String PHONE = "0123456789";                   // Replace with actual phone number
+    private boolean isEPayment;  // New field
+    private static final String BUSINESS_NAME = "secondcourse.";
+    private static final String SLOGAN = "'CAUSE FIRST IS NEVER ENOUGH'";
+    private static final String INSTAGRAM = "@secondcourse.id";
+    private static final String PHONE = "0123456789";
 
-    public Receipt(Order order, double cashGiven, double change) {
+    public Receipt(Order order, double cashGiven, double change, boolean isEPayment) {  // Updated constructor
         this.order = order;
         this.dateTime = LocalDateTime.now();
         this.cashGiven = cashGiven;
         this.change = change;
+        this.isEPayment = isEPayment;
     }
 
     public Order getOrder() {
@@ -35,6 +36,10 @@ public class Receipt {
 
     public double getChange() {
         return change;
+    }
+
+    public boolean isEPayment() {  // New getter
+        return isEPayment;
     }
 
     public String getBusinessName() {

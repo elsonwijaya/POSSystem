@@ -52,22 +52,30 @@ public class ThermalPrinter implements Printable {
         for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
             Product product = entry.getKey();
             int quantity = entry.getValue();
-            long price = (long) product.getPrice();
-            long totalPrice = price * quantity;
+            long totalPrice = (long)(product.getPrice() * quantity);
 
-            // Product description with pax
-            lines.add(String.format("%s (%d pax)", product.getName(), quantity));
+            // Product description
+            lines.add(String.format("%s - %s",
+                    product.getType().getDisplayName(),
+                    product.getVariant()));
 
             // Price calculation right-aligned
-            String priceFormat = String.format("%dx%,d = Rp %,d", quantity, price, totalPrice);
-            lines.add(rightAlign(priceFormat));  // Using rightAlign for price line
+            String priceFormat = String.format("Rp %,d", totalPrice);
+            lines.add(rightAlign(priceFormat));
         }
 
         lines.add(separator);
 
         // Financial details - right aligned
         lines.add(rightAlign(String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())));
-        lines.add(rightAlign(String.format("Cash: Rp %,d", (long)receipt.getCashGiven())));
+
+        // Use E-payment or Cash based on payment method
+        if (receipt.isEPayment()) {
+            lines.add(rightAlign(String.format("E-payment: Rp %,d", (long)receipt.getCashGiven())));
+        } else {
+            lines.add(rightAlign(String.format("Cash: Rp %,d", (long)receipt.getCashGiven())));
+        }
+
         lines.add(rightAlign(String.format("Change: Rp %,d", (long)receipt.getChange())));
         lines.add(separator);
         lines.add(separator);
@@ -130,54 +138,59 @@ public class ThermalPrinter implements Printable {
             EscPos escpos = new EscPos(printerOS);
 
             // Set styles
-            Style titleStyle = new Style()
-                    .setBold(true);
-            Style normalStyle = new Style();
-
-            // Create styles with correct justification constants
-            Style centerStyle = new Style().setJustification(Style.Justification.Center);
-            Style leftStyle = new Style().setJustification(Style.Justification.Left_Default);
-            Style rightStyle = new Style().setJustification(Style.Justification.Right);
-
-            // Generate content
-            generateReceiptContent();
+            Style centerStyle = new Style()
+                    .setJustification(Style.Justification.Center);
+            Style leftStyle = new Style()
+                    .setJustification(Style.Justification.Left_Default);
 
             // Header
-            escpos.write(titleStyle.setJustification(Style.Justification.Center), receipt.getBusinessName()).feed(1)
+            escpos.write(centerStyle, receipt.getBusinessName()).feed(1)
                     .write(centerStyle, receipt.getSlogan()).feed(1)
                     .write(centerStyle, "-".repeat(32)).feed(1)
                     .write(centerStyle, "INVOICE").feed(1)
+                    .write(centerStyle, "-".repeat(32)).feed(1)
+                    .write(leftStyle, "Description Amount").feed(1)
                     .write(centerStyle, "-".repeat(32)).feed(1);
-
-            // Headers
-            escpos.write(leftStyle, String.format("%-22s%10s", "Description", "Amount")).feed(1)
-                    .write(leftStyle, "-".repeat(32)).feed(1);
 
             // Items
             for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
                 Product product = entry.getKey();
                 int quantity = entry.getValue();
-                long price = (long) product.getPrice();
-                long totalPrice = price * quantity;
+                long totalPrice = (long)(product.getPrice() * quantity);
 
-                escpos.write(leftStyle, String.format("%s (%d pax)", product.getName(), quantity)).feed(1)
-                        .write(rightStyle, String.format("%dx%,d = Rp %,d", quantity, price, totalPrice)).feed(1);
+                // Product name
+                escpos.write(leftStyle, String.format("%s - %s",
+                        product.getType().getDisplayName(),
+                        product.getVariant())).feed(1);
+
+                // Price
+                escpos.write(leftStyle, String.format("Rp %,d", totalPrice)).feed(1);
             }
 
-            escpos.write(leftStyle, "-".repeat(32)).feed(1);
+            // Separator before totals
+            escpos.write(centerStyle, "-".repeat(32)).feed(1);
 
-            // Totals - Right aligned
-            escpos.write(rightStyle, String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())).feed(1)
-                    .write(rightStyle, String.format("Cash: Rp %,d", (long)receipt.getCashGiven())).feed(1)
-                    .write(rightStyle, String.format("Change: Rp %,d", (long)receipt.getChange())).feed(1);
+            // Totals
+            escpos.write(leftStyle, String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())).feed(1);
 
-            escpos.write(leftStyle, "-".repeat(32)).feed(1);
+            // Use E-payment or Cash based on payment method
+            if (receipt.isEPayment()) {
+                escpos.write(leftStyle, String.format("E-payment: Rp %,d", (long)receipt.getCashGiven())).feed(1);
+            } else {
+                escpos.write(leftStyle, String.format("Cash: Rp %,d", (long)receipt.getCashGiven())).feed(1);
+            }
 
-            // Date - Left aligned
+            escpos.write(leftStyle, String.format("Change: Rp %,d", (long)receipt.getChange())).feed(1);
+
+            // Double separator after totals
+            escpos.write(centerStyle, "-".repeat(32)).feed(1)
+                    .write(centerStyle, "-".repeat(32)).feed(1);
+
+            // Date
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             escpos.write(leftStyle, "Date: " + receipt.getDateTime().format(formatter)).feed(2);
 
-            // Footer - Centered
+            // Footer
             escpos.write(centerStyle, "Thank you for your purchase!").feed(1)
                     .write(centerStyle, "Instagram: " + receipt.getInstagram()).feed(2)
                     .write(centerStyle, "best served cold").feed(1)
