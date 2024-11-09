@@ -2,14 +2,17 @@ package javafx.controller;
 
 import database.Database;
 import javafx.fxml.FXML;
-import javafx.model.Product;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
-import javafx.scene.Scene;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
+import javafx.util.StringConverter;
+import javafx.model.Product;
+import javafx.model.ProductType;
 
 import java.sql.SQLException;
 
@@ -17,34 +20,58 @@ import static javafx.utils.SceneUtil.DEFAULT_WINDOW_HEIGHT;
 import static javafx.utils.SceneUtil.DEFAULT_WINDOW_WIDTH;
 
 public class AddProductController {
-
     @FXML
-    private TextField nameField;
-
+    private ComboBox<ProductType> typeComboBox;
+    @FXML
+    private TextField variantField;
     @FXML
     private TextField priceField;
-
     @FXML
     private Label statusLabel;
+    @FXML
+    private Button backButton;
 
     @FXML
-    private Button backButton; // For the Back button
+    public void initialize() {
+        // Populate the type combo box
+        typeComboBox.getItems().addAll(ProductType.values());
+        typeComboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(ProductType type) {
+                return type != null ? type.getDisplayName() : "";
+            }
+
+            @Override
+            public ProductType fromString(String string) {
+                return null; // Not needed for ComboBox
+            }
+        });
+    }
 
     @FXML
     public void handleAddProduct() {
-        String name = nameField.getText().trim();
+        ProductType selectedType = typeComboBox.getValue();
+        String variant = variantField.getText().trim();
         String priceText = priceField.getText().trim();
 
-        // Input validation
-        if (name.isEmpty() || priceText.isEmpty()) {
-            statusLabel.setText("Please fill in all fields.");
+        // Validation
+        if (selectedType == null) {
+            statusLabel.setText("Please select a product type.");
+            return;
+        }
+        if (variant.isEmpty()) {
+            statusLabel.setText("Please enter a product variant.");
+            return;
+        }
+        if (priceText.isEmpty()) {
+            statusLabel.setText("Please enter a price.");
             return;
         }
 
         try {
             double price = Double.parseDouble(priceText);
-            Product product = new Product(name, price);
-            Database.addProduct(product); // Add the product to the database
+            Product product = new Product(selectedType, variant, price);
+            Database.addProduct(product);
 
             statusLabel.setText("Product added successfully!");
             clearFields();
@@ -56,7 +83,8 @@ public class AddProductController {
     }
 
     private void clearFields() {
-        nameField.clear();
+        typeComboBox.setValue(null);
+        variantField.clear();
         priceField.clear();
     }
 

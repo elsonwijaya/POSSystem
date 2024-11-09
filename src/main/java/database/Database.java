@@ -2,6 +2,8 @@ package database;
 
 import javafx.model.Product;
 import javafx.model.Order;
+import javafx.model.ProductType;
+
 import java.io.*;
 import java.nio.file.*;
 import java.sql.*;
@@ -102,10 +104,13 @@ public class Database {
             String createProductsTableSQL = """
         CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            price REAL NOT NULL
+            type TEXT NOT NULL,
+            variant TEXT NOT NULL,
+            price REAL NOT NULL,
+            UNIQUE(type, variant)
         );
         """;
+
 
             // Step 3: Create the orders table if it doesn't exist
             String createOrdersTableSQL = """
@@ -143,27 +148,27 @@ public class Database {
     }
 
     public static void addProduct(Product product) throws SQLException {
-        String sql = "INSERT INTO products (name, price) VALUES (?, ?)";
+        String sql = "INSERT INTO products (type, variant, price) VALUES (?, ?, ?)";  // changed name to variant
 
         try (Connection connection = getConnection();
              PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, product.getName());
-            pstmt.setDouble(2, product.getPrice());
+            pstmt.setString(1, product.getType().name());
+            pstmt.setString(2, product.getVariant());  // changed from getName
+            pstmt.setDouble(3, product.getPrice());
             pstmt.executeUpdate();
-        } catch (SQLException e) {
-            throw new SQLException("Error adding product: " + e.getMessage(), e);
         }
     }
 
     public static boolean removeProduct(Product product) throws SQLException {
-        String sql = "DELETE FROM products WHERE name = ? AND price = ?"; // Using name and price to identify the product
+        String sql = "DELETE FROM products WHERE type = ? AND variant = ? AND price = ?";
 
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, product.getName());
-            pstmt.setDouble(2, product.getPrice()); // Ensure `price` uniquely identifies products if names may overlap
+            pstmt.setString(1, product.getType().name());
+            pstmt.setString(2, product.getVariant());
+            pstmt.setDouble(3, product.getPrice());
             int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;  // Returns true if the product was removed successfully
+            return affectedRows > 0;
         } catch (SQLException e) {
             System.err.println("Error removing product: " + e.getMessage());
             throw new SQLException("Failed to remove product: " + e.getMessage(), e);
@@ -172,16 +177,17 @@ public class Database {
 
     public static List<Product> getAllProducts() {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT name, price FROM products";
+        String sql = "SELECT type, variant, price FROM products ORDER BY type, variant";  // changed name to variant
 
         try (Connection connection = getConnection();
              Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String name = rs.getString("name");
+                ProductType type = ProductType.valueOf(rs.getString("type"));
+                String variant = rs.getString("variant");  // changed from name
                 double price = rs.getDouble("price");
-                products.add(new Product(name, price));
+                products.add(new Product(type, variant, price));
             }
         } catch (SQLException e) {
             System.err.println("Error fetching products: " + e.getMessage());
@@ -217,10 +223,10 @@ public class Database {
 
     private static void saveOrderItems(long orderId, Map<Product, Integer> items) throws SQLException {
         String sql = """
-        INSERT INTO order_items (order_id, product_id, quantity, price_per_unit)
-        SELECT ?, id, ?, price
-        FROM products
-        WHERE name = ?
+    INSERT INTO order_items (order_id, product_id, quantity, price_per_unit)
+    SELECT ?, id, ?, price
+    FROM products
+    WHERE type = ? AND variant = ?
     """;
 
         try (Connection conn = getConnection();
@@ -232,7 +238,8 @@ public class Database {
 
                 pstmt.setLong(1, orderId);
                 pstmt.setInt(2, quantity);
-                pstmt.setString(3, product.getName());
+                pstmt.setString(3, product.getType().name());
+                pstmt.setString(4, product.getVariant());
 
                 pstmt.executeUpdate();
             }
@@ -244,13 +251,13 @@ public class Database {
         List<Map<String, Object>> orderHistory = new ArrayList<>();
 
         String sql = """
-        SELECT o.id, o.total, o.order_date,
-               oi.quantity, oi.price_per_unit,
-               p.name as product_name
-        FROM orders o
-        JOIN order_items oi ON o.id = oi.order_id
-        JOIN products p ON oi.product_id = p.id
-        ORDER BY o.order_date DESC
+    SELECT o.id, o.total, o.order_date,
+           oi.quantity, oi.price_per_unit,
+           p.type as product_type, p.variant as product_variant
+    FROM orders o
+    JOIN order_items oi ON o.id = oi.order_id
+    JOIN products p ON oi.product_id = p.id
+    ORDER BY o.order_date DESC
     """;
 
         try (Connection conn = getConnection();
@@ -278,7 +285,10 @@ public class Database {
 
                 // Add item to current order
                 Map<String, Object> item = new HashMap<>();
-                item.put("productName", rs.getString("product_name"));
+                String productType = rs.getString("product_type");
+                String productVariant = rs.getString("product_variant");
+                // Format product display: "Type - Variant"
+                item.put("productName", productType + " - " + productVariant);
                 item.put("quantity", rs.getInt("quantity"));
                 item.put("pricePerUnit", rs.getDouble("price_per_unit"));
                 currentItems.add(item);

@@ -2,6 +2,7 @@ package javafx.controller;
 
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.model.ProductType;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -12,6 +13,9 @@ import javafx.scene.Parent;
 import database.Database;
 import javafx.model.Order;
 import javafx.model.Product;
+import java.util.stream.Collectors;
+import java.util.Set;
+import javafx.util.StringConverter;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -22,7 +26,9 @@ import static javafx.utils.SceneUtil.DEFAULT_WINDOW_WIDTH;
 public class CalculateTotalController {
 
     @FXML
-    private ComboBox<Product> productComboBox;
+    private ComboBox<ProductType> typeComboBox;
+    @FXML
+    private ComboBox<Product> variantComboBox;
     @FXML
     private TextField quantityTextField;
     @FXML
@@ -30,29 +36,90 @@ public class CalculateTotalController {
     @FXML
     private Label changeLabel;
     @FXML
-    private Button backButton;
-    @FXML
     private Button checkoutButton;
+    @FXML
+    private Button backButton;
 
     private Order currentOrder;
     private double lastCashGiven = 0.0;
     private double lastChange = 0.0;
+    private List<Product> allProducts;
 
     public void initialize() {
         currentOrder = new Order();
         loadProducts();
+        setupComboBoxes();
         updateCheckoutButton();
     }
 
     private void loadProducts() {
-        List<Product> products = Database.getAllProducts();
-        productComboBox.getItems().clear();
-        productComboBox.getItems().addAll(products);
+        allProducts = Database.getAllProducts();
+
+        // Populate type ComboBox
+        Set<ProductType> types = allProducts.stream()
+                .map(Product::getType)
+                .collect(Collectors.toSet());
+        typeComboBox.getItems().addAll(types);
+
+        // Setup type ComboBox display
+        typeComboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(ProductType type) {
+                return type != null ? type.getDisplayName() : "";
+            }
+
+            @Override
+            public ProductType fromString(String string) {
+                return null;
+            }
+        });
+    }
+
+    private void setupComboBoxes() {
+        // When type is selected, update variant ComboBox
+        typeComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                List<Product> variants = allProducts.stream()
+                        .filter(p -> p.getType() == newVal)
+                        .collect(Collectors.toList());
+                variantComboBox.getItems().clear();
+                variantComboBox.getItems().addAll(variants);
+            }
+        });
+
+        // Setup variant ComboBox display
+        variantComboBox.setCellFactory(lv -> new ListCell<Product>() {
+            @Override
+            protected void updateItem(Product product, boolean empty) {
+                super.updateItem(product, empty);
+                if (empty || product == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("%s (Rp %,d)",
+                            product.getVariant(),
+                            (long)product.getPrice()));
+                }
+            }
+        });
+
+        variantComboBox.setButtonCell(new ListCell<Product>() {
+            @Override
+            protected void updateItem(Product product, boolean empty) {
+                super.updateItem(product, empty);
+                if (empty || product == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("%s (Rp %,d)",
+                            product.getVariant(),
+                            (long)product.getPrice()));
+                }
+            }
+        });
     }
 
     @FXML
     private void handleAddButton() {
-        Product selectedProduct = productComboBox.getSelectionModel().getSelectedItem();
+        Product selectedProduct = variantComboBox.getSelectionModel().getSelectedItem();
         String quantityStr = quantityTextField.getText();
 
         if (!validateInput(selectedProduct, quantityStr)) {
@@ -65,7 +132,8 @@ public class CalculateTotalController {
         updateCheckoutButton();
 
         // Clear inputs after adding
-        productComboBox.getSelectionModel().clearSelection();
+        typeComboBox.getSelectionModel().clearSelection();
+        variantComboBox.getItems().clear();
         quantityTextField.clear();
     }
 
@@ -80,11 +148,14 @@ public class CalculateTotalController {
     }
 
     private boolean validateInput(Product selectedProduct, String quantityStr) {
-        if (selectedProduct == null) {
-            showAlert("Error", "Please select a product.");
+        if (typeComboBox.getValue() == null) {
+            showAlert("Error", "Please select a product type.");
             return false;
         }
-
+        if (selectedProduct == null) {
+            showAlert("Error", "Please select a product variant.");
+            return false;
+        }
         try {
             int quantity = Integer.parseInt(quantityStr);
             if (quantity <= 0) {
@@ -95,7 +166,6 @@ public class CalculateTotalController {
             showAlert("Error", "Invalid quantity. Please enter a valid number.");
             return false;
         }
-
         return true;
     }
 
@@ -163,14 +233,14 @@ public class CalculateTotalController {
         // Show dialog and process result
         dialog.showAndWait().ifPresent(result -> {
             try {
-                if (result.equals("epayment")) {
-                    // Handle E-Payment (same as exact amount)
-                    processCheckout(currentOrder.getTotal());
+                if ("epayment".equals(result)) {
+                    // Handle E-Payment case
+                    processCheckout(currentOrder.getTotal(), true);
                 } else {
-                    // Handle cash payment
+                    // Handle cash payment case
                     String cleanValue = result.replace(",", "");
                     double cashGiven = Double.parseDouble(cleanValue);
-                    processCheckout(cashGiven);
+                    processCheckout(cashGiven, false);
                 }
             } catch (NumberFormatException e) {
                 showAlert("Error", "Invalid input. Please enter a valid number.");
@@ -178,7 +248,7 @@ public class CalculateTotalController {
         });
     }
 
-    private void processCheckout(double cashGiven) {
+    private void processCheckout(double cashGiven, boolean isEPayment) {  // Added isEPayment parameter
         double total = currentOrder.getTotal();
         double change = cashGiven - total;
 
@@ -193,7 +263,8 @@ public class CalculateTotalController {
 
         // Update the display immediately
         changeLabel.setVisible(true);
-        changeLabel.setText(String.format("Cash: Rp %,d | Change: Rp %,d",
+        changeLabel.setText(String.format("%s: Rp %,d | Change: Rp %,d",
+                isEPayment ? "E-payment" : "Cash",
                 (long)cashGiven, (long)change));
 
         // Show proceed to receipt confirmation
@@ -201,8 +272,10 @@ public class CalculateTotalController {
         confirmReceipt.setTitle("Proceed to Receipt");
         confirmReceipt.setHeaderText("Transaction Complete");
         confirmReceipt.setContentText(String.format(
-                "Total: Rp %,d\nCash: Rp %,d\nChange: Rp %,d\n\nWould you like to view the receipt?",
-                (long)total, (long)cashGiven, (long)change));
+                "Total: Rp %,d\n%s: Rp %,d\nChange: Rp %,d\n\nWould you like to view the receipt?",
+                (long)total,
+                isEPayment ? "E-payment" : "Cash",
+                (long)cashGiven, (long)change));
 
         confirmReceipt.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
@@ -211,23 +284,23 @@ public class CalculateTotalController {
                     Database.saveOrder(currentOrder);
 
                     // After successful save, show the receipt
-                    loadReceiptView(cashGiven, change);
+                    loadReceiptView(cashGiven, change, isEPayment);
                 } catch (SQLException e) {
                     showAlert("Error", "Failed to save order: " + e.getMessage());
                     // Still show receipt even if save fails
-                    loadReceiptView(cashGiven, change);
+                    loadReceiptView(cashGiven, change, isEPayment);
                 }
             }
         });
     }
 
-    private void loadReceiptView(double cashGiven, double change) {
+    private void loadReceiptView(double cashGiven, double change, boolean isEPayment) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/javafx/Receipt.fxml"));
             Parent root = loader.load();
             ReceiptController receiptController = loader.getController();
             receiptController.setOrder(currentOrder);
-            receiptController.setCashDetails(cashGiven, change);
+            receiptController.setCashDetails(cashGiven, change, isEPayment);
 
             Stage stage = (Stage) backButton.getScene().getWindow();
             Scene scene = new Scene(root, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
