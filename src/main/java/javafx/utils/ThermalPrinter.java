@@ -17,6 +17,7 @@ import java.awt.print.Paper;
 import java.awt.print.Printable;
 import java.awt.print.PrinterJob;
 import java.io.File;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,28 +41,30 @@ public class ThermalPrinter implements Printable {
         // Header
         lines.add(centerText(receipt.getBusinessName()));
         lines.add(centerText(receipt.getSlogan()));
+        lines.add(centerText("Instagram: " + receipt.getInstagram()));
         lines.add(separator);
         lines.add(centerText("INVOICE"));
         lines.add(separator);
 
-        // Column Headers
+        // Fixed Column Headers - using specific spacing
         lines.add(String.format("%-22s%10s", "Description", "Amount"));
         lines.add(separator);
 
-        // Items - Description and Amount in columns
+        // Items
         for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
             Product product = entry.getKey();
             int quantity = entry.getValue();
-            long totalPrice = (long)(product.getPrice() * quantity);
+            long price = (long)product.getPrice();
+            long totalPrice = price * quantity;
 
             // Product description
             lines.add(String.format("%s - %s",
                     product.getType().getDisplayName(),
                     product.getVariant()));
 
-            // Price calculation right-aligned
-            String priceFormat = String.format("Rp %,d", totalPrice);
-            lines.add(rightAlign(priceFormat));
+            // Price calculation with quantity
+            lines.add(rightAlign(String.format("%dx%,d = Rp %,d",
+                    quantity, price, totalPrice)));
         }
 
         lines.add(separator);
@@ -69,28 +72,128 @@ public class ThermalPrinter implements Printable {
         // Financial details - right aligned
         lines.add(rightAlign(String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())));
 
-        // Use E-payment or Cash based on payment method
         if (receipt.isEPayment()) {
             lines.add(rightAlign(String.format("E-payment: Rp %,d", (long)receipt.getCashGiven())));
         } else {
             lines.add(rightAlign(String.format("Cash: Rp %,d", (long)receipt.getCashGiven())));
         }
-
         lines.add(rightAlign(String.format("Change: Rp %,d", (long)receipt.getChange())));
         lines.add(separator);
         lines.add(separator);
 
-        // Date - left aligned
+        // Date - left aligned with current time
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        lines.add("Date: " + receipt.getDateTime().format(formatter));
+        lines.add("Date: " + LocalDateTime.now().format(formatter));
         lines.add("");
 
         // Footer - centered
         lines.add(centerText("Thank you for your purchase!"));
-        lines.add(centerText("Instagram: " + receipt.getInstagram()));
         lines.add("");
-        lines.add(centerText("best served cold"));
-        lines.add(centerText("please kept refrigerated"));
+        lines.add(centerText("Best served cold"));
+        lines.add(centerText("Please kept refrigerated"));
+    }
+
+    // Thermal Printing
+    public void printToThermalPrinter() throws Exception {
+        try {
+            PrintService printService = PrintServiceLookup.lookupDefaultPrintService();
+            if (printService == null) {
+                throw new Exception("No printer found");
+            }
+
+            PrinterOutputStream printerOS = new PrinterOutputStream(printService);
+            EscPos escpos = new EscPos(printerOS);
+
+            // Set styles
+            Style centerStyle = new Style().setJustification(Style.Justification.Center);
+            Style rightStyle = new Style().setJustification(Style.Justification.Right);
+            Style leftStyle = new Style().setJustification(Style.Justification.Left_Default);
+
+            // Business name with larger font
+            Style titleStyle = new Style()
+                    .setJustification(Style.Justification.Center)
+                    .setFontSize(Style.FontSize._2, Style.FontSize._2);
+
+            // Smaller font for slogan
+            Style sloganStyle = new Style()
+                    .setJustification(Style.Justification.Center)
+                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
+
+            // Smaller font for products
+            Style smallStyle = new Style()
+                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
+
+            Style smallLeftStyle = new Style()
+                    .setJustification(Style.Justification.Left_Default)
+                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
+
+            Style smallRightStyle = new Style()
+                    .setJustification(Style.Justification.Right)
+                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
+
+            // Header section
+            escpos.write(titleStyle, receipt.getBusinessName()).feed(1)
+                    .write(sloganStyle, receipt.getSlogan()).feed(1)
+                    .write(centerStyle, "Instagram: " + receipt.getInstagram()).feed(1)
+                    .write(centerStyle, "-".repeat(32)).feed(1)
+                    .write(centerStyle, "INVOICE").feed(1)
+                    .write(centerStyle, "-".repeat(32)).feed(1);
+
+            // Description and Amount headers
+            escpos.write(leftStyle, String.format("%-22s%10s", "Description", "Amount")).feed(1);
+            escpos.write(centerStyle, "-".repeat(32)).feed(1);
+
+            // Items with smaller font
+            for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
+                Product product = entry.getKey();
+                int quantity = entry.getValue();
+                long price = (long)product.getPrice();
+                long totalPrice = price * quantity;
+
+                // Product name with smaller font
+                escpos.write(smallLeftStyle, String.format("%s - %s",
+                        product.getType().getDisplayName(),
+                        product.getVariant())).feed(1);
+
+                // Price calculation with smaller font
+                escpos.write(smallRightStyle, String.format("%dx%,d = Rp %,d",
+                        quantity, price, totalPrice)).feed(1);
+            }
+
+            // Back to normal font size for the rest
+            escpos.write(centerStyle, "-".repeat(32)).feed(1);
+
+            // Totals section
+            escpos.write(rightStyle, String.format("Total: Rp %,d",
+                    (long)receipt.getOrder().getTotal())).feed(1);
+
+            if (receipt.isEPayment()) {
+                escpos.write(rightStyle, String.format("E-payment: Rp %,d",
+                        (long)receipt.getCashGiven())).feed(1);
+            } else {
+                escpos.write(rightStyle, String.format("Cash: Rp %,d",
+                        (long)receipt.getCashGiven())).feed(1);
+            }
+            escpos.write(rightStyle, String.format("Change: Rp %,d",
+                    (long)receipt.getChange())).feed(1);
+
+            escpos.write(centerStyle, "-".repeat(32)).feed(1)
+                    .write(centerStyle, "-".repeat(32)).feed(1);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            escpos.write(leftStyle, "Date: " + LocalDateTime.now().format(formatter)).feed(2);
+
+            escpos.write(centerStyle, "Thank you for your purchase!").feed(2)
+                    .write(centerStyle, "Best served cold").feed(1)
+                    .write(centerStyle, "Please kept refrigerated").feed(3)
+                    .cut(EscPos.CutMode.FULL);
+
+            escpos.close();
+            printerOS.close();
+
+        } catch (Exception e) {
+            throw new Exception("Failed to print to thermal printer: " + e.getMessage());
+        }
     }
 
     private String centerText(String text) {
@@ -124,85 +227,6 @@ public class ThermalPrinter implements Printable {
         }
 
         return PAGE_EXISTS;
-    }
-
-    // Thermal Printing
-    public void printToThermalPrinter() throws Exception {
-        try {
-            PrintService printService = PrintServiceLookup.lookupDefaultPrintService();
-            if (printService == null) {
-                throw new Exception("No printer found");
-            }
-
-            PrinterOutputStream printerOS = new PrinterOutputStream(printService);
-            EscPos escpos = new EscPos(printerOS);
-
-            // Set styles
-            Style centerStyle = new Style()
-                    .setJustification(Style.Justification.Center);
-            Style leftStyle = new Style()
-                    .setJustification(Style.Justification.Left_Default);
-
-            // Header
-            escpos.write(centerStyle, receipt.getBusinessName()).feed(1)
-                    .write(centerStyle, receipt.getSlogan()).feed(1)
-                    .write(centerStyle, "-".repeat(32)).feed(1)
-                    .write(centerStyle, "INVOICE").feed(1)
-                    .write(centerStyle, "-".repeat(32)).feed(1)
-                    .write(leftStyle, "Description Amount").feed(1)
-                    .write(centerStyle, "-".repeat(32)).feed(1);
-
-            // Items
-            for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
-                Product product = entry.getKey();
-                int quantity = entry.getValue();
-                long totalPrice = (long)(product.getPrice() * quantity);
-
-                // Product name
-                escpos.write(leftStyle, String.format("%s - %s",
-                        product.getType().getDisplayName(),
-                        product.getVariant())).feed(1);
-
-                // Price
-                escpos.write(leftStyle, String.format("Rp %,d", totalPrice)).feed(1);
-            }
-
-            // Separator before totals
-            escpos.write(centerStyle, "-".repeat(32)).feed(1);
-
-            // Totals
-            escpos.write(leftStyle, String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())).feed(1);
-
-            // Use E-payment or Cash based on payment method
-            if (receipt.isEPayment()) {
-                escpos.write(leftStyle, String.format("E-payment: Rp %,d", (long)receipt.getCashGiven())).feed(1);
-            } else {
-                escpos.write(leftStyle, String.format("Cash: Rp %,d", (long)receipt.getCashGiven())).feed(1);
-            }
-
-            escpos.write(leftStyle, String.format("Change: Rp %,d", (long)receipt.getChange())).feed(1);
-
-            // Double separator after totals
-            escpos.write(centerStyle, "-".repeat(32)).feed(1)
-                    .write(centerStyle, "-".repeat(32)).feed(1);
-
-            // Date
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            escpos.write(leftStyle, "Date: " + receipt.getDateTime().format(formatter)).feed(2);
-
-            // Footer
-            escpos.write(centerStyle, "Thank you for your purchase!").feed(1)
-                    .write(centerStyle, "Instagram: " + receipt.getInstagram()).feed(2)
-                    .write(centerStyle, "best served cold").feed(1)
-                    .write(centerStyle, "please kept refrigerated").feed(3)
-                    .cut(EscPos.CutMode.FULL);
-
-            escpos.close();
-            printerOS.close();
-
-        } catch (Exception e) {
-            throw new Exception("Failed to print to thermal printer: " + e.getMessage());
-        }
     }
 
     // PDF Generation
