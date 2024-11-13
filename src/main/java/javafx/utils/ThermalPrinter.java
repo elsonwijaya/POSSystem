@@ -129,6 +129,11 @@ public class ThermalPrinter implements Printable {
                     .setJustification(Style.Justification.Left_Default)
                     .setFontSize(Style.FontSize._1, Style.FontSize._1);
 
+            Style extraSmallStyle = new Style()
+                    .setJustification(Style.Justification.Left_Default)
+                    .setFontSize(Style.FontSize._1, Style.FontSize._1)
+                    .setFontName(Style.FontName.Font_B);
+
             // Force center alignment for header elements
             escpos.writeLF(titleStyle, receipt.getBusinessName())
                     .writeLF(sloganStyle, receipt.getSlogan())
@@ -163,17 +168,17 @@ public class ThermalPrinter implements Printable {
             escpos.writeLF(centerStyle, "-".repeat(32));
 
             // Totals section
-            escpos.writeLF(leftStyle, String.format("Total: Rp %,d",
+            escpos.writeLF(rightStyle, String.format("Total: Rp %,d",
                     (long)receipt.getOrder().getTotal()));
 
             if (receipt.isEPayment()) {
-                escpos.writeLF(leftStyle, String.format("E-payment: Rp %,d",
+                escpos.writeLF(rightStyle, String.format("E-payment: Rp %,d",
                         (long)receipt.getCashGiven()));
             } else {
-                escpos.writeLF(leftStyle, String.format("Cash: Rp %,d",
+                escpos.writeLF(rightStyle, String.format("Cash: Rp %,d",
                         (long)receipt.getCashGiven()));
             }
-            escpos.writeLF(leftStyle, String.format("Change: Rp %,d",
+            escpos.writeLF(rightStyle, String.format("Change: Rp %,d",
                     (long)receipt.getChange()));
 
             // Double separator
@@ -188,8 +193,8 @@ public class ThermalPrinter implements Printable {
             // Footer
             escpos.writeLF(centerStyle, "Thank you for your purchase!")
                     .feed(1)
-                    .writeLF(centerStyle, "best served cold")
-                    .writeLF(centerStyle, "please kept refrigerated")
+                    .writeLF(centerStyle, "Best served cold")
+                    .writeLF(centerStyle, "Please kept refrigerated")
                     .feed(3)
                     .cut(EscPos.CutMode.FULL);
 
