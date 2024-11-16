@@ -67,9 +67,8 @@ jlink {
                 '--add-opens', 'java.base/java.nio.file=org.example.posystem',
                 '--add-opens', 'java.base/java.sql=org.example.posystem',
                 '-Dfile.encoding=UTF-8',
-                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',  // Add this
-                '--add-opens', 'java.base/java.io=ALL-UNNAMED',    // Add this
-                // Add these new opens for escpos-coffee
+                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.io=ALL-UNNAMED',
                 '--add-opens', 'java.base/java.util=ALL-UNNAMED',
                 '--add-opens', 'java.base/java.net=ALL-UNNAMED'
         ]
@@ -84,23 +83,44 @@ jlink {
         outputDir = "installers"
         imageName = "POSSystem"
         skipInstaller = false
-
         installerName = 'POSSystem'
-        installerType = 'exe'
+
+        // Detect the operating system and apply appropriate options
+        def os = System.getProperty('os.name').toLowerCase()
+        if (os.contains('windows')) {
+            installerType = 'exe'
+            installerOptions = [
+                    '--vendor', 'Your Company Name',
+                    '--win-menu',
+                    '--win-dir-chooser',
+                    '--win-shortcut',
+                    '--win-per-user-install',
+                    '--win-menu-group', 'POSSystem',
+                    '--description', 'POS System Application',
+                    '--verbose'
+            ]
+        } else if (os.contains('linux')) {
+            installerType = 'deb'  // or 'rpm' depending on your Linux distribution
+            installerOptions = [
+                    '--vendor', 'Your Company Name',
+                    '--linux-menu-group', 'POSSystem',
+                    '--linux-shortcut',
+                    '--description', 'POS System Application',
+                    '--verbose'
+            ]
+        } else if (os.contains('mac')) {
+            installerType = 'pkg'
+            installerOptions = [
+                    '--vendor', 'Your Company Name',
+                    '--mac-package-identifier', 'com.yourcompany.possystem',
+                    '--mac-package-name', 'POSSystem',
+                    '--description', 'POS System Application',
+                    '--verbose'
+            ]
+        }
 
         // Ensure all resources are included
         resourceDir = file("src/main/resources")
-
-        installerOptions = [
-                '--vendor', 'Your Company Name',
-                '--win-menu',
-                '--win-dir-chooser',
-                '--win-shortcut',
-                '--win-per-user-install',
-                '--win-menu-group', 'POSSystem',
-                '--description', 'POS System Application',
-                '--verbose'
-        ]
     }
 }
 
