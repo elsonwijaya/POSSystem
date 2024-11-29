@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ThermalPrinter implements Printable {
     private static final int PRINTER_WIDTH_MM = 58;
@@ -50,8 +51,18 @@ public class ThermalPrinter implements Printable {
         lines.add(String.format("%-22s%10s", "Description", "Amount"));
         lines.add(separator);
 
+        // Sort items
+        List<Map.Entry<Product, Integer>> sortedItems = receipt.getOrder().getItems().entrySet()
+                .stream()
+                .sorted((a, b) -> {
+                    String productA = a.getKey().getType().getDisplayName() + a.getKey().getVariant();
+                    String productB = b.getKey().getType().getDisplayName() + b.getKey().getVariant();
+                    return productA.compareTo(productB);
+                })
+                .collect(Collectors.toList());
+
         // Items
-        for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
+        for (Map.Entry<Product, Integer> entry : sortedItems) {
             Product product = entry.getKey();
             int quantity = entry.getValue();
             long price = (long)product.getPrice();
@@ -93,108 +104,76 @@ public class ThermalPrinter implements Printable {
         lines.add(centerText("Please kept refrigerated"));
     }
 
-    // Thermal Printing
     public void printToThermalPrinter() throws Exception {
         try {
             PrintService printService = PrintServiceLookup.lookupDefaultPrintService();
-            if (printService == null) {
-                throw new Exception("No printer found");
-            }
+            if (printService == null) throw new Exception("No printer found");
 
             PrinterOutputStream printerOS = new PrinterOutputStream(printService);
             EscPos escpos = new EscPos(printerOS);
 
-            // Set styles with explicit center alignment
-            Style centerStyle = new Style()
-                    .setJustification(Style.Justification.Center);
+            Style centerStyle = new Style().setJustification(Style.Justification.Center);
+            Style rightStyle = new Style().setJustification(Style.Justification.Right);
+            Style leftStyle = new Style().setJustification(Style.Justification.Left_Default);
+            Style titleStyle = new Style().setJustification(Style.Justification.Center).setFontSize(Style.FontSize._2, Style.FontSize._2);
+            Style extraSmallStyle = new Style().setJustification(Style.Justification.Left_Default).setFontSize(Style.FontSize._1, Style.FontSize._1).setFontName(Style.FontName.Font_B);
 
-            Style rightStyle = new Style()
-                    .setJustification(Style.Justification.Right);
-
-            Style leftStyle = new Style()
-                    .setJustification(Style.Justification.Left_Default);
-
-            // Business name - centered and large
-            Style titleStyle = new Style()
-                    .setJustification(Style.Justification.Center)
-                    .setFontSize(Style.FontSize._2, Style.FontSize._2);
-
-            // Slogan - centered but smaller
-            Style sloganStyle = new Style()
-                    .setJustification(Style.Justification.Center)
-                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
-
-            // Smaller font for products
-            Style smallStyle = new Style()
-                    .setJustification(Style.Justification.Left_Default)
-                    .setFontSize(Style.FontSize._1, Style.FontSize._1);
-
-            Style extraSmallStyle = new Style()
-                    .setJustification(Style.Justification.Left_Default)
-                    .setFontSize(Style.FontSize._1, Style.FontSize._1)
-                    .setFontName(Style.FontName.Font_B);
-
-            // Force center alignment for header elements
+            // Header
             escpos.writeLF(titleStyle, receipt.getBusinessName())
-                    .writeLF(sloganStyle, receipt.getSlogan())
-                    .writeLF(centerStyle, "Instagram: " + receipt.getInstagram())
+                    .writeLF(extraSmallStyle, receipt.getSlogan())
+                    .writeLF(extraSmallStyle, "Instagram: " + receipt.getInstagram())
                     .writeLF(centerStyle, "-".repeat(32))
                     .writeLF(centerStyle, "INVOICE")
                     .writeLF(centerStyle, "-".repeat(32));
 
             // Description and Amount headers
-            escpos.writeLF(leftStyle, String.format("%-22s%10s", "Description", "Amount"))
+            escpos.writeLF(extraSmallStyle, String.format("%-22s%10s", "Description", "Amount"))
                     .writeLF(centerStyle, "-".repeat(32));
 
-            // Items with smaller font
-            for (Map.Entry<Product, Integer> entry : receipt.getOrder().getItems().entrySet()) {
+            // Sort items
+            List<Map.Entry<Product, Integer>> sortedItems = receipt.getOrder().getItems().entrySet()
+                    .stream()
+                    .sorted((a, b) -> {
+                        String productA = a.getKey().getType().getDisplayName() + a.getKey().getVariant();
+                        String productB = b.getKey().getType().getDisplayName() + b.getKey().getVariant();
+                        return productA.compareTo(productB);
+                    })
+                    .collect(Collectors.toList());
+
+            // Items
+            for (Map.Entry<Product, Integer> entry : sortedItems) {
                 Product product = entry.getKey();
                 int quantity = entry.getValue();
                 long price = (long)product.getPrice();
                 long totalPrice = price * quantity;
 
-                // Product name with smaller font
-                escpos.writeLF(smallStyle, String.format("%s - %s (%d pax)",
+                escpos.writeLF(extraSmallStyle, String.format("%s - %s",
                         product.getType().getDisplayName(),
-                        product.getVariant(),
-                        quantity));
-
-                // Price calculation with smaller font
-                escpos.writeLF(smallStyle, String.format("%dx%,d = Rp %,d",
+                        product.getVariant()));
+                escpos.writeLF(extraSmallStyle, String.format("%dx%,d = Rp %,d",
                         quantity, price, totalPrice));
             }
 
-            // Separator
             escpos.writeLF(centerStyle, "-".repeat(32));
 
-            // Totals section
-            escpos.writeLF(rightStyle, String.format("Total: Rp %,d",
-                    (long)receipt.getOrder().getTotal()));
+            // Totals
+            escpos.writeLF(rightStyle, String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal()));
+            escpos.writeLF(rightStyle, String.format("%s: Rp %,d",
+                    receipt.isEPayment() ? "E-payment" : "Cash", (long)receipt.getCashGiven()));
+            escpos.writeLF(rightStyle, String.format("Change: Rp %,d", (long)receipt.getChange()));
 
-            if (receipt.isEPayment()) {
-                escpos.writeLF(rightStyle, String.format("E-payment: Rp %,d",
-                        (long)receipt.getCashGiven()));
-            } else {
-                escpos.writeLF(rightStyle, String.format("Cash: Rp %,d",
-                        (long)receipt.getCashGiven()));
-            }
-            escpos.writeLF(rightStyle, String.format("Change: Rp %,d",
-                    (long)receipt.getChange()));
-
-            // Double separator
             escpos.writeLF(centerStyle, "-".repeat(32))
                     .writeLF(centerStyle, "-".repeat(32));
 
             // Date
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            escpos.writeLF(leftStyle, "Date: " + LocalDateTime.now().format(formatter))
+            escpos.writeLF(extraSmallStyle, "Date: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))
                     .feed(1);
 
             // Footer
             escpos.writeLF(centerStyle, "Thank you for your purchase!")
                     .feed(1)
                     .writeLF(centerStyle, "Best served cold")
-                    .writeLF(centerStyle, "Please kept refrigerated")
+                    .writeLF(centerStyle, "Please keep refrigerated")
                     .feed(3)
                     .cut(EscPos.CutMode.FULL);
 
@@ -217,7 +196,7 @@ public class ThermalPrinter implements Printable {
         return " ".repeat(CHAR_WIDTH - text.length()) + text;
     }
 
-    // PDF Printing
+    // PDF Printing and Generation methods remain unchanged...
     @Override
     public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) {
         if (pageIndex > 0) return NO_SUCH_PAGE;
@@ -230,16 +209,14 @@ public class ThermalPrinter implements Printable {
 
         float y = g2d.getFontMetrics().getHeight();
 
-        // Print each line exactly as formatted in generateReceiptContent
         for (String line : lines) {
-            g2d.drawString(line, 0, y);  // All lines start from left margin
+            g2d.drawString(line, 0, y);
             y += g2d.getFontMetrics().getHeight();
         }
 
         return PAGE_EXISTS;
     }
 
-    // PDF Generation
     public void printReceipt(Receipt receipt, String outputPath) throws Exception {
         generateReceiptContent();
 
