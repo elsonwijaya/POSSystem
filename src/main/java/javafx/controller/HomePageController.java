@@ -39,6 +39,11 @@ public class HomePageController {
         loadScene("/javafx/OrderHistory.fxml", "Order History");
     }
 
+    @FXML
+    public void handleNavigateToEditProduct() {
+        loadScene("/javafx/EditProduct.fxml", "Edit Product");
+    }
+
     private void loadScene(String fxmlPath, String title) {
         try {
             Stage stage = (Stage) calculateTotalButton.getScene().getWindow(); // Use calculateTotalButton or addProductButton
