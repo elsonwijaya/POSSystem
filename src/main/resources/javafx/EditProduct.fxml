@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="javafx.controller.EditProductController">
+    <VBox alignment="CENTER" spacing="10"
+          AnchorPane.leftAnchor="50"
+          AnchorPane.rightAnchor="50"
+          AnchorPane.topAnchor="50"
+          AnchorPane.bottomAnchor="50">
+
+        <Label text="Select Product to Edit:" />
+        <ComboBox fx:id="productComboBox"
+                  promptText="Select Product"
+                  prefWidth="300"
+                  minWidth="300"
+                  maxWidth="300"
+                  prefHeight="40" />
+
+        <Label text="Edit Product Type:" />
+        <ComboBox fx:id="typeComboBox"
+                  promptText="Product Type"
+                  prefWidth="300"
+                  minWidth="300"
+                  maxWidth="300"
+                  prefHeight="40" />
+
+        <Label text="Edit Product Variant:" />
+        <TextField fx:id="variantField"
+                   promptText="Product Variant"
+                   prefWidth="300"
+                   minWidth="300"
+                   maxWidth="300"
+                   prefHeight="40" />
+
+        <Label text="Edit Price:" />
+        <TextField fx:id="priceField"
+                   promptText="Price"
+                   prefWidth="300"
+                   minWidth="300"
+                   maxWidth="300"
+                   prefHeight="40" />
+
+        <Button text="Save Changes"
+                onAction="#handleSaveChanges"
+                prefWidth="300"
+                minWidth="300"
+                maxWidth="300"
+                prefHeight="50" />
+
+        <Label fx:id="statusLabel" />
+
+        <Button text="Back"
+                fx:id="backButton"
+                onAction="#handleBack"
+                prefWidth="300"
+                minWidth="300"
+                maxWidth="300"
+                prefHeight="50" />
+    </VBox>
+</AnchorPane>

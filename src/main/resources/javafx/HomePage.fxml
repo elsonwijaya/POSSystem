@@ -11,11 +11,11 @@
                     prefWidth="200" prefHeight="50" styleClass="large-button" />
             <Button fx:id="addProductButton" text="Add Product" onAction="#handleNavigateToAddProduct"
                     prefWidth="200" prefHeight="50" styleClass="large-button" />
-            <!-- New button for navigating to Remove Product page -->
+            <Button fx:id="editProductButton" text="Edit Product" onAction="#handleNavigateToEditProduct"
+                    prefWidth="200" prefHeight="50" styleClass="large-button" />
             <Button fx:id="removeProductButton" text="Remove Product" onAction="#handleNavigateToRemoveProduct"
                     prefWidth="200" prefHeight="50" styleClass="large-button" />
-            <Button fx:id="orderHistoryButton" text="Order History"
-                    onAction="#handleNavigateToOrderHistory"
+            <Button fx:id="orderHistoryButton" text="Order History" onAction="#handleNavigateToOrderHistory"
                     prefWidth="200" prefHeight="50" styleClass="large-button" />
         </VBox>
     </children>
