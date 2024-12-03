@@ -145,7 +145,8 @@ public class ThermalPrinter implements Printable {
                     })
                     .collect(Collectors.toList());
 
-            for (Map.Entry<Product, Integer> entry : sortedItems) {
+            for (int i = 0; i < sortedItems.size(); i++) {
+                Map.Entry<Product, Integer> entry = sortedItems.get(i);
                 Product product = entry.getKey();
                 int quantity = entry.getValue();
                 long price = (long)product.getPrice();
@@ -156,7 +157,11 @@ public class ThermalPrinter implements Printable {
                         product.getVariant()));
                 escpos.writeLF(extraSmallStyle, String.format("%dx%,d = Rp %,d",
                         quantity, price, totalPrice));
-                escpos.feed(1); // Add a blank line after each item
+
+                // Add new line
+                if (i < sortedItems.size() - 1) {
+                    escpos.feed(1);
+                }
             }
 
             escpos.writeLF(centerStyle, "-".repeat(32));
