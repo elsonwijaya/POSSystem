@@ -51,7 +51,7 @@ public class ThermalPrinter implements Printable {
         lines.add(String.format("%-22s%10s", "Description", "Amount"));
         lines.add(separator);
 
-        // Sort items
+        // Sort and add items
         List<Map.Entry<Product, Integer>> sortedItems = receipt.getOrder().getItems().entrySet()
                 .stream()
                 .sorted((a, b) -> {
@@ -68,36 +68,41 @@ public class ThermalPrinter implements Printable {
             long price = (long)product.getPrice();
             long totalPrice = price * quantity;
 
-            // Product description
             lines.add(String.format("%s - %s",
                     product.getType().getDisplayName(),
                     product.getVariant()));
-
-            // Price calculation with quantity
             lines.add(rightAlign(String.format("%dx%,d = Rp %,d",
                     quantity, price, totalPrice)));
         }
 
         lines.add(separator);
 
-        // Financial details - right aligned
-        lines.add(rightAlign(String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal())));
+        // Get subtotal and check for discount
+        double subtotal = receipt.getOrder().getSubtotal();
+        lines.add(rightAlign(String.format("Total: Rp %,d", (long)subtotal)));
 
+        // Add discount line only if applicable
+        if (subtotal >= 300000) {
+            String discountText = subtotal >= 500000 ? "10%" : "5%";
+            double discountAmount = subtotal >= 500000 ? subtotal * 0.1 : subtotal * 0.05;
+            lines.add(rightAlign(String.format("Discount (%s): -Rp %,d", discountText, (long)discountAmount)));
+        }
+
+        // Payment and change lines
         if (receipt.isEPayment()) {
             lines.add(rightAlign(String.format("E-payment: Rp %,d", (long)receipt.getCashGiven())));
         } else {
             lines.add(rightAlign(String.format("Cash: Rp %,d", (long)receipt.getCashGiven())));
         }
         lines.add(rightAlign(String.format("Change: Rp %,d", (long)receipt.getChange())));
+
         lines.add(separator);
         lines.add(separator);
 
-        // Date - left aligned with current time
+        // Date and footer
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         lines.add("Date: " + LocalDateTime.now().format(formatter));
         lines.add("");
-
-        // Footer - centered
         lines.add(centerText("Thank you for your purchase!"));
         lines.add("");
         lines.add(centerText("Best served cold"));
@@ -130,7 +135,7 @@ public class ThermalPrinter implements Printable {
             escpos.writeLF(extraSmallStyle, String.format("%-22s%10s", "Description", "Amount"))
                     .writeLF(centerStyle, "-".repeat(32));
 
-            // Sort items
+            // Items
             List<Map.Entry<Product, Integer>> sortedItems = receipt.getOrder().getItems().entrySet()
                     .stream()
                     .sorted((a, b) -> {
@@ -140,7 +145,6 @@ public class ThermalPrinter implements Printable {
                     })
                     .collect(Collectors.toList());
 
-            // Items
             for (Map.Entry<Product, Integer> entry : sortedItems) {
                 Product product = entry.getKey();
                 int quantity = entry.getValue();
@@ -152,16 +156,29 @@ public class ThermalPrinter implements Printable {
                         product.getVariant()));
                 escpos.writeLF(extraSmallStyle, String.format("%dx%,d = Rp %,d",
                         quantity, price, totalPrice));
+                escpos.feed(1); // Add a blank line after each item
             }
 
             escpos.writeLF(centerStyle, "-".repeat(32));
 
-            // Totals
-            escpos.writeLF(rightStyle, String.format("Total: Rp %,d", (long)receipt.getOrder().getTotal()));
+            // Updated totals section with conditional discount
+            double subtotal = receipt.getOrder().getSubtotal();
+            escpos.writeLF(rightStyle, String.format("Total: Rp %,d", (long)subtotal));
+
+            // Add discount line only if applicable
+            if (subtotal >= 300000) {
+                String discountText = subtotal >= 500000 ? "10%" : "5%";
+                double discountAmount = subtotal >= 500000 ? subtotal * 0.1 : subtotal * 0.05;
+                escpos.writeLF(rightStyle, String.format("Discount (%s): -Rp %,d", discountText, (long)discountAmount));
+            }
+
+            // Payment and change
             escpos.writeLF(rightStyle, String.format("%s: Rp %,d",
-                    receipt.isEPayment() ? "E-payment" : "Cash", (long)receipt.getCashGiven()));
+                    receipt.isEPayment() ? "E-payment" : "Cash",
+                    (long)receipt.getCashGiven()));
             escpos.writeLF(rightStyle, String.format("Change: Rp %,d", (long)receipt.getChange()));
 
+            // Footer
             escpos.writeLF(centerStyle, "-".repeat(32))
                     .writeLF(centerStyle, "-".repeat(32));
 
