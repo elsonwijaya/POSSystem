@@ -40,12 +40,24 @@
                 prefHeight="50"
                 style="-fx-font-size: 16px;" />
 
-        <Label fx:id="totalLabel"
-               text="Total: Rp"
-               style="-fx-font-weight: bold; -fx-font-size: 16px;" />
-        <Label fx:id="changeLabel"
-               style="-fx-font-size: 16px;"
-               visible="false" />
+        <!-- Updated total display section -->
+        <VBox alignment="CENTER" spacing="5">
+            <Label fx:id="totalLabel"
+                   text="Subtotal: Rp 0"
+                   style="-fx-font-size: 16px;" />
+
+            <Label fx:id="discountLabel"
+                   style="-fx-font-size: 16px; -fx-text-fill: #2ecc71;"
+                   visible="false" />
+
+            <Label fx:id="finalTotalLabel"
+                   text="Final Total: Rp 0"
+                   style="-fx-font-weight: bold; -fx-font-size: 18px;" />
+
+            <Label fx:id="changeLabel"
+                   style="-fx-font-size: 16px;"
+                   visible="false" />
+        </VBox>
 
         <Button fx:id="checkoutButton"
                 text="Checkout"

@@ -52,7 +52,15 @@ public class ReceiptController {
                     (long)(product.getPrice() * quantity)));
         });
 
-        receiptText.append("\nTotal: Rp ").append(String.format("%,d", (long)order.getTotal())).append("\n");
+        receiptText.append("\nSubtotal: Rp ").append(String.format("%,d", (long)order.getSubtotal())).append("\n");
+
+        // Add discount information if applicable
+        if (order.getDiscount() > 0) {
+            receiptText.append(order.getDiscountDescription()).append("\n");
+            receiptText.append("Discount: -Rp ").append(String.format("%,d", (long)order.getDiscount())).append("\n");
+        }
+
+        receiptText.append("Total: Rp ").append(String.format("%,d", (long)order.getTotal())).append("\n");
 
         // Use E-payment or Cash based on payment method
         if (isEPayment) {

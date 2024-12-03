@@ -36,6 +36,10 @@ public class CalculateTotalController {
     @FXML
     private Label changeLabel;
     @FXML
+    private Label discountLabel;
+    @FXML
+    private Label finalTotalLabel;
+    @FXML
     private Button checkoutButton;
     @FXML
     private Button backButton;
@@ -138,7 +142,24 @@ public class CalculateTotalController {
     }
 
     private void updateTotalDisplay() {
-        totalLabel.setText(String.format("Total: Rp %,d", (long)currentOrder.getTotal()));
+        double subtotal = currentOrder.getSubtotal();
+        double discount = currentOrder.getDiscount();
+        double finalTotal = currentOrder.getTotal();
+
+        // Update labels
+        totalLabel.setText(String.format("Subtotal: Rp %,d", (long)subtotal));
+
+        if (discount > 0) {
+            discountLabel.setVisible(true);
+            discountLabel.setText(String.format("%s\nDiscount: -Rp %,d",
+                    currentOrder.getDiscountDescription(),
+                    (long)discount));
+        } else {
+            discountLabel.setVisible(false);
+        }
+
+        finalTotalLabel.setText(String.format("Final Total: Rp %,d", (long)finalTotal));
+
         // If we have previous cash/change information, update that display too
         if (lastCashGiven > 0) {
             changeLabel.setVisible(true);
@@ -248,9 +269,9 @@ public class CalculateTotalController {
         });
     }
 
-    private void processCheckout(double cashGiven, boolean isEPayment) {  // Added isEPayment parameter
-        double total = currentOrder.getTotal();
-        double change = cashGiven - total;
+    private void processCheckout(double cashGiven, boolean isEPayment) {
+        double finalTotal = currentOrder.getTotal(); // This is the discounted total
+        double change = cashGiven - finalTotal;
 
         if (change < 0) {
             showAlert("Error", "Not enough cash given!");
@@ -271,23 +292,29 @@ public class CalculateTotalController {
         Alert confirmReceipt = new Alert(Alert.AlertType.CONFIRMATION);
         confirmReceipt.setTitle("Proceed to Receipt");
         confirmReceipt.setHeaderText("Transaction Complete");
-        confirmReceipt.setContentText(String.format(
-                "Total: Rp %,d\n%s: Rp %,d\nChange: Rp %,d\n\nWould you like to view the receipt?",
-                (long)total,
-                isEPayment ? "E-payment" : "Cash",
-                (long)cashGiven, (long)change));
+
+        StringBuilder contentText = new StringBuilder();
+        contentText.append(String.format("Subtotal: Rp %,d\n", (long)currentOrder.getSubtotal()));
+
+        if (currentOrder.getDiscount() > 0) {
+            contentText.append(String.format("%s\n", currentOrder.getDiscountDescription()));
+            contentText.append(String.format("Discount: -Rp %,d\n", (long)currentOrder.getDiscount()));
+        }
+
+        contentText.append(String.format("Final Total: Rp %,d\n", (long)finalTotal));
+        contentText.append(String.format("%s: Rp %,d\n", isEPayment ? "E-payment" : "Cash", (long)cashGiven));
+        contentText.append(String.format("Change: Rp %,d\n\n", (long)change));
+        contentText.append("Would you like to view the receipt?");
+
+        confirmReceipt.setContentText(contentText.toString());
 
         confirmReceipt.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 try {
-                    // Save the order to database before showing receipt
                     Database.saveOrder(currentOrder);
-
-                    // After successful save, show the receipt
                     loadReceiptView(cashGiven, change, isEPayment);
                 } catch (SQLException e) {
                     showAlert("Error", "Failed to save order: " + e.getMessage());
-                    // Still show receipt even if save fails
                     loadReceiptView(cashGiven, change, isEPayment);
                 }
             }
