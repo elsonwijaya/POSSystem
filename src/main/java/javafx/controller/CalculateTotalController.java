@@ -1,7 +1,11 @@
 package javafx.controller;
 
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.model.CartItem;
 import javafx.model.ProductType;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -13,6 +17,9 @@ import javafx.scene.Parent;
 import database.Database;
 import javafx.model.Order;
 import javafx.model.Product;
+
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.Set;
 import javafx.util.StringConverter;
@@ -367,5 +374,67 @@ public class CalculateTotalController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    @FXML
+    private void handleViewCart() {
+        try {
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("View Cart");
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/javafx/ViewCart.fxml"));
+            DialogPane dialogPane = loader.load();
+            dialog.setDialogPane(dialogPane);
+
+            TableView<CartItem> cartTable = (TableView<CartItem>) dialogPane.lookup("#cartTable");
+            setupCartColumns(cartTable);
+
+            // Convert current order items to observable list
+            List<CartItem> cartItems = new ArrayList<>();
+            currentOrder.getItems().forEach((product, quantity) ->
+                    cartItems.add(new CartItem(product, quantity)));
+
+            // Use ObservableList instead of regular List
+            var observableItems = FXCollections.observableArrayList(cartItems);
+            cartTable.setItems(observableItems);
+
+            Button removeButton = (Button) dialogPane.lookup("#removeButton");
+            removeButton.setOnAction(event -> {
+                CartItem selectedItem = cartTable.getSelectionModel().getSelectedItem();
+                if (selectedItem != null) {
+                    currentOrder.getItems().remove(selectedItem.getProduct());
+                    observableItems.remove(selectedItem);  // This will update the display immediately
+                    updateTotalDisplay();
+                    updateCheckoutButton();
+                }
+            });
+
+            dialog.showAndWait();
+
+        } catch (IOException e) {
+            showAlert("Error", "Failed to open cart view: " + e.getMessage());
+        }
+    }
+
+    // Helper method to setup cart columns
+    private void setupCartColumns(TableView<CartItem> cartTable) {
+        TableColumn<CartItem, String> typeColumn = (TableColumn<CartItem, String>) cartTable.getColumns().get(0);
+        TableColumn<CartItem, String> variantColumn = (TableColumn<CartItem, String>) cartTable.getColumns().get(1);
+        TableColumn<CartItem, Integer> quantityColumn = (TableColumn<CartItem, Integer>) cartTable.getColumns().get(2);
+        TableColumn<CartItem, String> priceColumn = (TableColumn<CartItem, String>) cartTable.getColumns().get(3);
+        TableColumn<CartItem, String> totalColumn = (TableColumn<CartItem, String>) cartTable.getColumns().get(4);
+
+        typeColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getProduct().getType().getDisplayName()));
+        variantColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(data.getValue().getProduct().getVariant()));
+        quantityColumn.setCellValueFactory(data ->
+                new SimpleIntegerProperty(data.getValue().getQuantity()).asObject());
+        priceColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(String.format("Rp %,d",
+                        (long)data.getValue().getProduct().getPrice())));
+        totalColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(String.format("Rp %,d",
+                        (long)(data.getValue().getProduct().getPrice() * data.getValue().getQuantity()))));
     }
 }
