@@ -10,6 +10,8 @@ import javafx.scene.Parent;
 import database.Database;
 import javafx.collections.FXCollections;
 import javafx.beans.property.SimpleStringProperty;
+
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -32,6 +34,10 @@ public class OrderHistoryController {
     @FXML private TableColumn<Map<String, Object>, String> priceColumn;
 
     @FXML private Button backButton;
+    @FXML private Button deleteButton;
+
+    @FXML
+    private Label totalLabel;
 
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -41,7 +47,6 @@ public class OrderHistoryController {
         setupColumns();
         loadOrderHistory();
 
-        // Show order details when an order is selected
         orderTable.getSelectionModel().selectedItemProperty().addListener(
                 (obs, oldSelection, newSelection) -> {
                     if (newSelection != null) {
@@ -102,6 +107,43 @@ public class OrderHistoryController {
         } catch (Exception e) {
             showAlert("Error", "Error returning to home page: " + e.getMessage());
         }
+    }
+
+    @FXML
+    private void handleDeleteOrder() {
+        Map<String, Object> selectedOrder = orderTable.getSelectionModel().getSelectedItem();
+        if (selectedOrder == null) {
+            showAlert("Error", "Please select an order to delete");
+            return;
+        }
+
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Delete Order");
+        confirmation.setHeaderText("Delete Order #" + selectedOrder.get("orderId"));
+        confirmation.setContentText("Are you sure you want to delete this order? This action cannot be undone.");
+
+        confirmation.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    Database.deleteOrder((Long) selectedOrder.get("orderId"));
+                    loadOrderHistory();
+                    orderDetailsPane.setVisible(false);
+                } catch (SQLException e) {
+                    showAlert("Error", "Failed to delete order: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    @FXML
+    private void handleShowTotal() {
+        // Calculate total from visible orders in the table
+        double total = 0.0;
+        for (Map<String, Object> order : orderTable.getItems()) {
+            total += (double) order.get("total");
+        }
+
+        totalLabel.setText(String.format("Total Sales: Rp %,d", (long)total));
     }
 
     private void showAlert(String title, String message) {

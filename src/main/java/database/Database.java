@@ -221,6 +221,29 @@ public class Database {
         }
     }
 
+    public static void deleteOrder(long orderId) throws SQLException {
+        String sql = "DELETE FROM orders WHERE id = ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, orderId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    public static double getTotalSales() throws SQLException {
+        String sql = "SELECT SUM(total) as total_sales FROM orders";
+
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getDouble("total_sales");
+            }
+            return 0.0;
+        }
+    }
+
     private static void saveOrderItems(long orderId, Map<Product, Integer> items) throws SQLException {
         String sql = """
     INSERT INTO order_items (order_id, product_id, quantity, price_per_unit)
