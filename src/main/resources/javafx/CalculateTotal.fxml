@@ -4,44 +4,60 @@
 <?import javafx.geometry.*?>
 
 <AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="javafx.controller.CalculateTotalController">
-    <VBox alignment="CENTER" spacing="20"
+    <VBox alignment="CENTER"
           AnchorPane.leftAnchor="50"
           AnchorPane.rightAnchor="50"
           AnchorPane.topAnchor="50"
           AnchorPane.bottomAnchor="50">
 
-        <Label text="Select Product Type:" style="-fx-font-size: 16px;" />
-        <ComboBox fx:id="typeComboBox"
-                  prefWidth="300"
-                  minWidth="300"
-                  maxWidth="300"
-                  prefHeight="40"/>
+        <!-- Input Section -->
+        <VBox alignment="CENTER" spacing="20">
+            <Label text="Select Product Type:" style="-fx-font-size: 16px;" />
+            <ComboBox fx:id="typeComboBox"
+                      prefWidth="300"
+                      minWidth="300"
+                      maxWidth="300"
+                      prefHeight="40"/>
 
-        <Label text="Select Variant:" style="-fx-font-size: 16px;" />
-        <ComboBox fx:id="variantComboBox"
-                  prefWidth="300"
-                  minWidth="300"
-                  maxWidth="300"
-                  prefHeight="40"/>
+            <Label text="Select Variant:" style="-fx-font-size: 16px;" />
+            <ComboBox fx:id="variantComboBox"
+                      prefWidth="300"
+                      minWidth="300"
+                      maxWidth="300"
+                      prefHeight="40"/>
 
-        <Label text="Quantity:" style="-fx-font-size: 16px;" />
-        <TextField fx:id="quantityTextField"
-                   prefWidth="300"
-                   minWidth="300"
-                   maxWidth="300"
-                   prefHeight="40" />
+            <Label text="Quantity:" style="-fx-font-size: 16px;" />
+            <TextField fx:id="quantityTextField"
+                       prefWidth="300"
+                       minWidth="300"
+                       maxWidth="300"
+                       prefHeight="40" />
 
-        <Button fx:id="addButton"
-                text="Add"
-                onAction="#handleAddButton"
-                prefWidth="300"
-                minWidth="300"
-                maxWidth="300"
-                prefHeight="50"
-                style="-fx-font-size: 16px;" />
+            <Button fx:id="addButton"
+                    text="Add"
+                    onAction="#handleAddButton"
+                    prefWidth="300"
+                    minWidth="300"
+                    maxWidth="300"
+                    prefHeight="50"
+                    style="-fx-font-size: 16px;" />
 
-        <!-- Updated total display section -->
+            <Button fx:id="viewCartButton"
+                    text="View Cart"
+                    onAction="#handleViewCart"
+                    prefWidth="300"
+                    minWidth="300"
+                    maxWidth="300"
+                    prefHeight="50"
+                    style="-fx-font-size: 16px; -fx-background-color: #4CAF50; -fx-text-fill: white;" />
+        </VBox>
+
+        <!-- Total Section with minimal spacing -->
         <VBox alignment="CENTER" spacing="5">
+            <padding>
+                <Insets top="20" />
+            </padding>
+
             <Label fx:id="totalLabel"
                    text="Subtotal: Rp 0"
                    style="-fx-font-size: 16px;" />
@@ -59,22 +75,29 @@
                    visible="false" />
         </VBox>
 
-        <Button fx:id="checkoutButton"
-                text="Checkout"
-                onAction="#handleCheckout"
-                prefWidth="300"
-                minWidth="300"
-                maxWidth="300"
-                prefHeight="50"
-                style="-fx-font-size: 16px;" />
+        <!-- Action Buttons with minimal spacing -->
+        <VBox alignment="CENTER" spacing="10">
+            <padding>
+                <Insets top="5" />
+            </padding>
 
-        <Button fx:id="backButton"
-                text="Back"
-                onAction="#handleBack"
-                prefWidth="300"
-                minWidth="300"
-                maxWidth="300"
-                prefHeight="50"
-                style="-fx-font-size: 16px;" />
+            <Button fx:id="checkoutButton"
+                    text="Checkout"
+                    onAction="#handleCheckout"
+                    prefWidth="300"
+                    minWidth="300"
+                    maxWidth="300"
+                    prefHeight="50"
+                    style="-fx-font-size: 16px;" />
+
+            <Button fx:id="backButton"
+                    text="Back"
+                    onAction="#handleBack"
+                    prefWidth="300"
+                    minWidth="300"
+                    maxWidth="300"
+                    prefHeight="50"
+                    style="-fx-font-size: 16px;" />
+        </VBox>
     </VBox>
 </AnchorPane>
