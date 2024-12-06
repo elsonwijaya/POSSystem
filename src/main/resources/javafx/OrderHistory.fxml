@@ -13,6 +13,14 @@
             <Label fx:id="totalLabel" style="-fx-font-size: 16px;" />
         </HBox>
 
+        <!-- Date Filter Section -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Filter by date:" />
+            <DatePicker fx:id="datePicker" />
+            <Button text="Apply Filter" onAction="#handleFilterByDate" />
+            <Button text="Clear Filter" onAction="#handleClearFilter" />
+        </HBox>
+
         <TableView fx:id="orderTable" VBox.vgrow="ALWAYS">
             <columns>
                 <TableColumn fx:id="orderIdColumn" text="Order ID" />

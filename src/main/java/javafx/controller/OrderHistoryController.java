@@ -14,8 +14,10 @@ import javafx.beans.property.SimpleStringProperty;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static javafx.utils.SceneUtil.DEFAULT_WINDOW_HEIGHT;
 import static javafx.utils.SceneUtil.DEFAULT_WINDOW_WIDTH;
@@ -38,6 +40,10 @@ public class OrderHistoryController {
 
     @FXML
     private Label totalLabel;
+
+    @FXML
+    private DatePicker datePicker;
+    private List<Map<String, Object>> allOrders = new ArrayList<>();
 
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -79,10 +85,35 @@ public class OrderHistoryController {
                         (long)((Double)data.getValue().get("pricePerUnit")).doubleValue())));
     }
 
+    @FXML
+    private void handleFilterByDate() {
+        if (datePicker.getValue() == null) {
+            showAlert("Error", "Please select a date");
+            return;
+        }
+
+        List<Map<String, Object>> filteredOrders = allOrders.stream()
+                .filter(order -> {
+                    Timestamp orderDate = (Timestamp) order.get("date");
+                    return orderDate.toLocalDateTime().toLocalDate().equals(datePicker.getValue());
+                })
+                .collect(Collectors.toList());
+
+        orderTable.setItems(FXCollections.observableArrayList(filteredOrders));
+        handleShowTotal(); // Update total for filtered orders
+    }
+
+    @FXML
+    private void handleClearFilter() {
+        datePicker.setValue(null);
+        orderTable.setItems(FXCollections.observableArrayList(allOrders));
+        handleShowTotal(); // Update total for all orders
+    }
+
     private void loadOrderHistory() {
         try {
-            List<Map<String, Object>> orders = Database.getOrderHistory();
-            orderTable.setItems(FXCollections.observableArrayList(orders));
+            allOrders = Database.getOrderHistory(); 
+            orderTable.setItems(FXCollections.observableArrayList(allOrders));
         } catch (Exception e) {
             showAlert("Error", "Failed to load order history: " + e.getMessage());
         }
