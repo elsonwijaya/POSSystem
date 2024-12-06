@@ -13,6 +13,7 @@ import javafx.beans.property.SimpleStringProperty;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -175,6 +176,41 @@ public class OrderHistoryController {
         }
 
         totalLabel.setText(String.format("Total Sales: Rp %,d", (long)total));
+    }
+
+    @FXML
+    private void handleViewProductStats() {
+        try {
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("Product Sales Statistics");
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/javafx/ProductStats.fxml"));
+            DialogPane dialogPane = loader.load();
+            dialog.setDialogPane(dialogPane);
+
+            TableView<Map<String, Object>> statsTable = (TableView<Map<String, Object>>) dialogPane.lookup("#statsTable");
+            setupStatsColumns(statsTable);
+
+            List<Map<String, Object>> stats = Database.getProductSalesStats();
+            statsTable.setItems(FXCollections.observableArrayList(stats));
+
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load product statistics: " + e.getMessage());
+        }
+    }
+
+    private void setupStatsColumns(TableView<Map<String, Object>> table) {
+        TableColumn<Map<String, Object>, String> typeColumn = (TableColumn<Map<String, Object>, String>) table.getColumns().get(0);
+        TableColumn<Map<String, Object>, String> variantColumn = (TableColumn<Map<String, Object>, String>) table.getColumns().get(1);
+        TableColumn<Map<String, Object>, String> quantityColumn = (TableColumn<Map<String, Object>, String>) table.getColumns().get(2);
+        TableColumn<Map<String, Object>, String> totalColumn = (TableColumn<Map<String, Object>, String>) table.getColumns().get(3);
+
+        typeColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().get("type").toString()));
+        variantColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().get("variant").toString()));
+        quantityColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().get("quantity").toString()));
+        totalColumn.setCellValueFactory(data ->
+                new SimpleStringProperty(String.format("Rp %,d", (long)((Double)data.getValue().get("total")).doubleValue())));
     }
 
     private void showAlert(String title, String message) {
