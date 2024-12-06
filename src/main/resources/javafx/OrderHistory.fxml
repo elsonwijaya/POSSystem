@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.*?>
@@ -13,7 +12,6 @@
             <Label fx:id="totalLabel" style="-fx-font-size: 16px;" />
         </HBox>
 
-        <!-- Date Filter Section -->
         <HBox spacing="10" alignment="CENTER_LEFT">
             <Label text="Filter by date:" />
             <DatePicker fx:id="datePicker" />
@@ -45,6 +43,8 @@
                     style="-fx-background-color: #ff4444; -fx-text-fill: white;" />
             <Button text="Show Total" onAction="#handleShowTotal"
                     style="-fx-background-color: #4CAF50; -fx-text-fill: white;" />
+            <Button text="Product Stats" onAction="#handleViewProductStats"
+                    style="-fx-background-color: #2196F3; -fx-text-fill: white;" />
             <Button fx:id="backButton" text="Back" onAction="#handleBack"
                     style="-fx-background-color: #808080; -fx-text-fill: white;" />
         </HBox>

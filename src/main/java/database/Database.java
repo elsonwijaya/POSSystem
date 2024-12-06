@@ -7,6 +7,7 @@ import javafx.model.ProductType;
 import java.io.*;
 import java.nio.file.*;
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -322,8 +323,44 @@ public class Database {
     }
 
 
+    public static List<Map<String, Object>> getProductSalesStats() throws SQLException {
+        String sql = """
+        SELECT 
+            p.type,
+            p.variant,
+            COALESCE(SUM(oi.quantity), 0) as total_quantity,
+            COALESCE(SUM(oi.quantity * oi.price_per_unit), 0) as total_sales
+        FROM products p
+        LEFT JOIN order_items oi ON p.id = oi.product_id
+        GROUP BY p.type, p.variant
+        ORDER BY 
+            CASE 
+                WHEN COALESCE(SUM(oi.quantity), 0) = 0 THEN 1 
+                ELSE 0 
+            END,
+            COALESCE(SUM(oi.quantity), 0) DESC,
+            p.type,
+            p.variant
+    """;
 
+        List<Map<String, Object>> stats = new ArrayList<>();
 
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Map<String, Object> stat = new HashMap<>();
+                stat.put("type", rs.getString("type"));
+                stat.put("variant", rs.getString("variant"));
+                stat.put("quantity", rs.getInt("total_quantity"));
+                stat.put("total", rs.getDouble("total_sales"));
+                stats.add(stat);
+            }
+        }
+
+        return stats;
+    }
 
     public static String generateReceiptFileName(String type) {
         LocalDateTime now = LocalDateTime.now();
